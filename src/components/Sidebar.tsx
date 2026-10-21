@@ -1,5 +1,7 @@
 import React from 'react';
-import { ClipboardList, LayoutDashboard, PackageCheck, ShoppingBag, TrendingUp, Users, Search } from 'lucide-react';
+import { ClipboardList, LayoutDashboard, PackageCheck, ShoppingBag, TrendingUp, Users, Search, ExternalLink } from 'lucide-react';
+
+const STAFF_SHOP_SESSION_KEY = 'medpoint_staff_shop_navigation';
 
 export type TabType = 'dashboard' | 'shelf-finder' | 'inventory' | 'pos' | 'sales' | 'salesmen' | 'operations';
 
@@ -44,6 +46,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, lowSt
             </button>
           );
         })}
+        <div className="my-3 border-t border-slate-200" />
+        <button
+          onClick={() => {
+            window.sessionStorage.setItem(STAFF_SHOP_SESSION_KEY, '1');
+            window.location.assign('/shop');
+          }}
+          title="Open customer shop"
+          aria-label="Open customer shop"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+        >
+          <ExternalLink size={18} />
+          <span className="flex-1">Customer shop</span>
+        </button>
       </nav>
     </aside>
   );

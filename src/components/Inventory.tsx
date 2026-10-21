@@ -23,7 +23,7 @@ interface InventoryProps {
   onAddMedicine: (medicine: Omit<Medicine, 'id'>) => void;
   onUpdateMedicine: (medicine: Medicine) => void;
   onDeleteMedicine: (medicineId: string) => void;
-  onAdjustStock: (medicineId: string, amount: number, reason: string) => void;
+  onAdjustStock: (medicineId: string, amount: number, reason: string, batchNumber: string, expiryDate: string, costPrice: number) => void;
 }
 
 export const Inventory: React.FC<InventoryProps> = ({
@@ -67,6 +67,9 @@ export const Inventory: React.FC<InventoryProps> = ({
   const [restockMedicineId, setRestockMedicineId] = useState<string | null>(null);
   const [restockAmount, setRestockAmount] = useState<number>(50);
   const [restockReason, setRestockReason] = useState<string>('Supplier Delivery Batch');
+  const [restockBatchNumber, setRestockBatchNumber] = useState('');
+  const [restockExpiryDate, setRestockExpiryDate] = useState('');
+  const [restockCostPrice, setRestockCostPrice] = useState(0);
 
   const categories: string[] = [
     'All',
@@ -79,6 +82,7 @@ export const Inventory: React.FC<InventoryProps> = ({
     'Dermatology & Topicals',
     'Gastrointestinal Care',
     'Eye & Ear Care',
+    'Medical Supplies',
   ];
 
   // Filter medicines
@@ -96,8 +100,10 @@ export const Inventory: React.FC<InventoryProps> = ({
     if (stockFilter === 'Low Stock') {
       matchesFilter = m.stock <= m.minStockThreshold;
     } else if (stockFilter === 'Expiring Soon') {
-      const expDays = (new Date(m.expiryDate).getTime() - Date.now()) / (1000 * 3600 * 24);
-      matchesFilter = expDays >= 0 && expDays <= 60;
+      matchesFilter = (m.batches || [{ expiryDate: m.expiryDate, quantity: m.stock }]).some((batch) => {
+        const expDays = (new Date(`${batch.expiryDate}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000;
+        return batch.quantity > 0 && expDays >= 0 && expDays <= 60;
+      });
     } else if (stockFilter === 'Rx Required') {
       matchesFilter = m.requiresPrescription;
     }
@@ -106,10 +112,10 @@ export const Inventory: React.FC<InventoryProps> = ({
   });
 
   const lowStockCount = medicines.filter((m) => m.stock <= m.minStockThreshold).length;
-  const expiringCount = medicines.filter((m) => {
-    const expDays = (new Date(m.expiryDate).getTime() - Date.now()) / (1000 * 3600 * 24);
-    return expDays >= 0 && expDays <= 60;
-  }).length;
+  const expiringCount = medicines.reduce((count, medicine) => count + (medicine.batches || [{ expiryDate: medicine.expiryDate, quantity: medicine.stock }]).filter((batch) => {
+    const expDays = (new Date(`${batch.expiryDate}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000;
+    return batch.quantity > 0 && expDays >= 0 && expDays <= 60;
+  }).length, 0);
 
   const handleOpenAddModal = () => {
     setEditingMedicine(null);
@@ -164,6 +170,10 @@ export const Inventory: React.FC<InventoryProps> = ({
   const handleSaveMedicine = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    if (!editingMedicine && new Date(`${expiryDate}T00:00:00`).getTime() < new Date(new Date().toDateString()).getTime()) {
+      alert('The starting batch expiry date cannot be in the past.');
+      return;
+    }
 
     if (editingMedicine) {
       onUpdateMedicine({
@@ -218,7 +228,7 @@ export const Inventory: React.FC<InventoryProps> = ({
 
   const submitRestock = () => {
     if (restockMedicineId && restockAmount !== 0) {
-      onAdjustStock(restockMedicineId, Number(restockAmount), restockReason);
+      onAdjustStock(restockMedicineId, Number(restockAmount), restockReason, restockBatchNumber, restockExpiryDate, restockCostPrice);
       setRestockMedicineId(null);
     }
   };
@@ -329,6 +339,7 @@ export const Inventory: React.FC<InventoryProps> = ({
                 </tr>
               ) : (
                 filteredMedicines.map((med) => {
+                  const medicineBatches = (med.batches || []).filter((batch) => batch.quantity > 0);
                   const isLow = med.stock <= med.minStockThreshold;
                   const expDate = new Date(med.expiryDate);
                   const daysToExpiry = Math.ceil((expDate.getTime() - Date.now()) / (1000 * 3600 * 24));
@@ -405,10 +416,7 @@ export const Inventory: React.FC<InventoryProps> = ({
 
                       {/* Batch & Expiry */}
                       <td className="py-3.5 px-4">
-                        <div className="font-mono text-[11px] text-slate-700">{med.batchNumber}</div>
-                        <div className={`text-[11px] font-bold ${isExpiringSoon ? 'text-amber-600' : 'text-slate-500'}`}>
-                          Exp: {med.expiryDate} {isExpiringSoon && '⚠️'}
-                        </div>
+                        <div className="space-y-1">{medicineBatches.slice(0, 2).map((batch) => <div key={batch.id} className="text-[10px]"><span className="font-mono text-slate-700">{batch.batchNumber}</span><span className="ml-1 text-slate-400">×{batch.quantity}</span><div className={`font-semibold ${new Date(`${batch.expiryDate}T00:00:00`).getTime() < new Date(new Date().toDateString()).getTime() ? 'text-rose-600' : 'text-slate-500'}`}>Exp: {batch.expiryDate}</div></div>)}{medicineBatches.length > 2 && <div className="text-[10px] text-teal-700">+{medicineBatches.length - 2} more batches</div>}</div>
                         <div className="text-[10px] text-slate-400">{med.manufacturer}</div>
                       </td>
 
@@ -420,6 +428,9 @@ export const Inventory: React.FC<InventoryProps> = ({
                               setRestockMedicineId(med.id);
                               setRestockAmount(50);
                               setRestockReason('Supplier Delivery Batch');
+                              setRestockBatchNumber(`BATCH-${Date.now().toString().slice(-6)}`);
+                              setRestockExpiryDate('2027-12-31');
+                              setRestockCostPrice(med.costPrice);
                             }}
                             className="bg-teal-50 hover:bg-teal-600 hover:text-white text-teal-700 font-bold px-2.5 py-1 rounded-xl text-[11px] transition-all flex items-center gap-1 border border-teal-200"
                           >
@@ -483,12 +494,12 @@ export const Inventory: React.FC<InventoryProps> = ({
                   <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Storage</p><p className="mt-1 font-semibold text-slate-800">{med.rackNumber} · {med.boxNumber}</p><p className="mt-0.5 text-slate-500">{med.shelfLevel}</p></div>
                   <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Selling rate</p><p className="medicine-rate mt-1 text-base font-bold">₹{med.price.toFixed(2)}</p><p className="mt-0.5 text-slate-500">Cost ₹{med.costPrice.toFixed(2)} · Min {med.minStockThreshold}</p></div>
                   <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Form & category</p><p className="mt-1 font-semibold text-slate-800">{med.form} · {med.dosage}</p><p className="mt-0.5 text-slate-500">{med.category}</p></div>
-                  <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Batch & expiry</p><p className="mt-1 font-mono text-slate-700">{med.batchNumber}</p><p className={`mt-0.5 font-semibold ${isExpiringSoon ? 'text-amber-400' : 'text-slate-500'}`}>{med.expiryDate}{isExpiringSoon && ' · Expiring soon'}</p></div>
+                  <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Batches & expiry</p>{(med.batches || []).filter((batch) => batch.quantity > 0).slice(0, 3).map((batch) => <p key={batch.id} className="mt-1 font-mono text-xs text-slate-700">{batch.batchNumber} · {batch.quantity} · exp {batch.expiryDate}</p>)}</div>
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-200 pt-3">
                   <span className="min-w-0 truncate text-xs text-slate-500">{med.manufacturer}</span>
                   <div className="flex shrink-0 items-center gap-2">
-                    <button onClick={() => { setRestockMedicineId(med.id); setRestockAmount(50); setRestockReason('Supplier Delivery Batch'); }} className="rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-2 text-xs font-bold text-teal-700">Restock</button>
+                    <button onClick={() => { setRestockMedicineId(med.id); setRestockAmount(50); setRestockReason('Supplier Delivery Batch'); setRestockBatchNumber(`BATCH-${Date.now().toString().slice(-6)}`); setRestockExpiryDate('2027-12-31'); setRestockCostPrice(med.costPrice); }} className="rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-2 text-xs font-bold text-teal-700">Restock</button>
                     <button onClick={() => handleOpenEditModal(med)} className="rounded-lg border border-slate-200 p-2 text-slate-400" title="Edit Medicine"><Edit3 size={15}/></button>
                     <button onClick={() => { if (confirm(`Delete medicine record "${med.name}"?`)) onDeleteMedicine(med.id); }} className="rounded-lg border border-slate-200 p-2 text-rose-400" title="Delete Medicine"><Trash2 size={15}/></button>
                   </div>
@@ -626,7 +637,7 @@ export const Inventory: React.FC<InventoryProps> = ({
                     onChange={(e) => setForm(e.target.value as DosageForm)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800"
                   >
-                    {['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Eye Drops', 'Inhaler'].map((f) => (
+                    {['Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment', 'Eye Drops', 'Inhaler', 'Sachet', 'Cream', 'Serum', 'Body Wash', 'Soap', 'Gel', 'Bar', 'Drink', 'Medical Device', 'Bandage', 'Tape'].map((f) => (
                       <option key={f} value={f}>{f}</option>
                     ))}
                   </select>
@@ -682,10 +693,12 @@ export const Inventory: React.FC<InventoryProps> = ({
                   <input
                     type="number"
                     min={0}
+                    disabled={!!editingMedicine}
                     value={stock}
                     onChange={(e) => setStock(Number(e.target.value))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800"
                   />
+                  {editingMedicine && <p className="mt-1 text-[10px] text-slate-400">Use Restock to change quantities and record new lots.</p>}
                 </div>
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Low Alert Qty</label>
@@ -705,6 +718,8 @@ export const Inventory: React.FC<InventoryProps> = ({
                   <input
                     type="date"
                     required
+                    min={new Date().toISOString().slice(0, 10)}
+                    disabled={!!editingMedicine}
                     value={expiryDate}
                     onChange={(e) => setExpiryDate(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800"
@@ -715,6 +730,7 @@ export const Inventory: React.FC<InventoryProps> = ({
                   <input
                     type="text"
                     required
+                    disabled={!!editingMedicine}
                     value={batchNumber}
                     onChange={(e) => setBatchNumber(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-mono"
@@ -767,11 +783,18 @@ export const Inventory: React.FC<InventoryProps> = ({
                 <label className="font-bold text-slate-700 block mb-1">Add Stock Quantity (+)</label>
                 <input
                   type="number"
+                  min="1"
                   value={restockAmount}
                   onChange={(e) => setRestockAmount(Number(e.target.value))}
                   className="w-full bg-teal-50 border border-teal-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none"
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="font-bold text-slate-700">New batch number<input required className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2" value={restockBatchNumber} onChange={(event) => setRestockBatchNumber(event.target.value)} /></label>
+                <label className="font-bold text-slate-700">Expiry date<input required type="date" min={new Date().toISOString().slice(0, 10)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2" value={restockExpiryDate} onChange={(event) => setRestockExpiryDate(event.target.value)} /></label>
+              </div>
+              <label className="block font-bold text-slate-700">Unit cost (₹)<input required type="number" min="0" step="0.01" className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2" value={restockCostPrice} onChange={(event) => setRestockCostPrice(Number(event.target.value))} /></label>
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Restock Reason / Invoice #</label>

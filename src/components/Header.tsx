@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cross, MapPin, Bell, RefreshCw, ChevronDown, CheckCircle2, AlertTriangle, Search } from 'lucide-react';
+import { Cross, MapPin, Bell, RefreshCw, ChevronDown, CheckCircle2, AlertTriangle, Search, Download, Upload } from 'lucide-react';
 import { PharmacyBranch, Medicine } from '../types';
 
 interface HeaderProps {
@@ -10,6 +10,8 @@ interface HeaderProps {
   onResetDemoData: () => void;
   onNavigateToInventory: () => void;
   onNavigateToShelfFinder: () => void;
+  onExportBackup: () => void;
+  onImportBackup: (file: File) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,6 +22,8 @@ export const Header: React.FC<HeaderProps> = ({
   onResetDemoData,
   onNavigateToInventory,
   onNavigateToShelfFinder,
+  onExportBackup,
+  onImportBackup,
 }) => {
   const [isBranchOpen, setIsBranchOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -35,11 +39,14 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const lowStock = medicines.filter((medicine) => medicine.stock <= medicine.minStockThreshold);
-  const expiringSoon = medicines.filter((medicine) => {
-    const days = (new Date(medicine.expiryDate).getTime() - Date.now()) / 86400000;
+  const today = new Date(new Date().toDateString()).getTime();
+  const batches = medicines.flatMap((medicine) => (medicine.batches?.length ? medicine.batches : [{ id: medicine.id, batchNumber: medicine.batchNumber, expiryDate: medicine.expiryDate, quantity: medicine.stock }]).filter((batch) => batch.quantity > 0).map((batch) => ({ ...batch, medicineName: medicine.name })));
+  const expired = batches.filter((batch) => new Date(`${batch.expiryDate}T00:00:00`).getTime() < today);
+  const expiringSoon = batches.filter((batch) => {
+    const days = (new Date(`${batch.expiryDate}T00:00:00`).getTime() - today) / 86400000;
     return days >= 0 && days <= 60;
   });
-  const alertCount = lowStock.length + expiringSoon.length;
+  const alertCount = lowStock.length + expired.length + expiringSoon.length;
 
   return (
     <header className="app-header sticky top-0 z-30 flex min-h-[72px] items-center justify-between gap-4 border-b border-slate-200/80 bg-white/95 px-5 backdrop-blur-xl">
@@ -53,6 +60,13 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="relative hidden md:block">
+          {branches.length === 1 ? (
+            <div className="flex max-w-64 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700" aria-label="Pharmacy location">
+              <MapPin size={16} className="shrink-0 text-teal-700" />
+              <span className="truncate">{currentBranch.name}</span>
+            </div>
+          ) : (
+            <>
           <button
             onClick={() => setIsBranchOpen(!isBranchOpen)}
             className="flex max-w-64 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -76,10 +90,23 @@ export const Header: React.FC<HeaderProps> = ({
               ))}
             </div>
           )}
+            </>
+          )}
         </div>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
+        <button onClick={onExportBackup} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm text-slate-600 hover:bg-slate-50 sm:px-3 sm:py-2" title="Export a backup" aria-label="Export a backup">
+          <Download size={16} /> <span className="hidden lg:inline">Backup</span>
+        </button>
+        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm text-slate-600 hover:bg-slate-50 sm:px-3 sm:py-2" title="Restore from a backup" aria-label="Restore from a backup">
+          <Upload size={16} /> <span className="hidden lg:inline">Restore</span>
+          <input type="file" accept="application/json,.json" className="sr-only" onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) onImportBackup(file);
+            event.currentTarget.value = '';
+          }} />
+        </label>
         <button
           onClick={onNavigateToShelfFinder}
           className="hidden items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 lg:flex"
@@ -107,6 +134,12 @@ export const Header: React.FC<HeaderProps> = ({
                 <p className="py-4 text-center text-sm text-slate-500">No current alerts.</p>
               ) : (
                 <div className="max-h-64 space-y-2 overflow-y-auto">
+                  {expired.map((medicine) => (
+                    <div key={`expired-${medicine.id}`} className="flex items-center justify-between rounded-md bg-rose-100 p-2.5 text-sm">
+                      <span className="truncate font-medium text-slate-800">{medicine.medicineName} · {medicine.batchNumber}</span>
+                      <span className="ml-2 shrink-0 text-xs font-semibold text-rose-800">Expired {medicine.expiryDate} · {medicine.quantity}</span>
+                    </div>
+                  ))}
                   {lowStock.map((medicine) => (
                     <div key={`low-${medicine.id}`} className="flex items-center justify-between rounded-md bg-rose-50 p-2.5 text-sm">
                       <span className="truncate text-slate-800">{medicine.name}</span>
@@ -115,8 +148,8 @@ export const Header: React.FC<HeaderProps> = ({
                   ))}
                   {expiringSoon.map((medicine) => (
                     <div key={`exp-${medicine.id}`} className="flex items-center justify-between rounded-md bg-amber-50 p-2.5 text-sm">
-                      <span className="truncate text-slate-800">{medicine.name}</span>
-                      <span className="ml-2 shrink-0 text-xs text-amber-700">Expires {medicine.expiryDate}</span>
+                      <span className="truncate text-slate-800">{medicine.medicineName} · {medicine.batchNumber}</span>
+                      <span className="ml-2 shrink-0 text-xs text-amber-700">Expires {new Date(`${medicine.expiryDate}T00:00:00`).toLocaleDateString()} · {medicine.quantity}</span>
                     </div>
                   ))}
                 </div>

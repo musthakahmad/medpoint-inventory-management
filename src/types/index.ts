@@ -7,7 +7,8 @@ export type MedicineCategory =
   | 'Respiratory & Cold Care'
   | 'Dermatology & Topicals'
   | 'Gastrointestinal Care'
-  | 'Eye & Ear Care';
+  | 'Eye & Ear Care'
+  | 'Medical Supplies';
 
 export type DosageForm = 
   | 'Tablet' 
@@ -17,7 +18,17 @@ export type DosageForm =
   | 'Ointment' 
   | 'Eye Drops' 
   | 'Inhaler' 
-  | 'Sachet';
+  | 'Sachet'
+  | 'Cream'
+  | 'Serum'
+  | 'Body Wash'
+  | 'Soap'
+  | 'Gel'
+  | 'Bar'
+  | 'Drink'
+  | 'Medical Device'
+  | 'Bandage'
+  | 'Tape';
 
 export interface Medicine {
   id: string;
@@ -45,6 +56,16 @@ export interface Medicine {
   description?: string;
   sideEffects?: string;
   image?: string;
+  batches?: MedicineBatch[];
+}
+
+export interface MedicineBatch {
+  id: string;
+  batchNumber: string;
+  expiryDate: string;
+  quantity: number;
+  costPrice: number;
+  receivedAt: string;
 }
 
 export interface Salesman {
@@ -67,6 +88,14 @@ export interface CartItem {
   medicine: Medicine;
   quantity: number;
   dosageInstructions?: string;
+  batchAllocations?: BatchAllocation[];
+}
+
+export interface BatchAllocation {
+  batchId: string;
+  batchNumber: string;
+  quantity: number;
+  costPrice: number;
 }
 
 export type PaymentMethod = 'Cash' | 'Card' | 'UPI / QR' | 'Insurance Claim' | 'Digital Wallet';
@@ -83,6 +112,8 @@ export interface Order {
   costTotal: number;
   profit: number; // total - costTotal
   paymentMethod: PaymentMethod;
+  cashReceived?: number;
+  changeDue?: number;
   branchId: string;
   status: 'Completed' | 'Refunded';
   customerName?: string;
@@ -103,6 +134,18 @@ export interface InventoryLog {
   timestamp: string;
   reason?: string;
   performedBy?: string;
+  batchNumber?: string;
+}
+
+export interface AuditEvent {
+  id: string;
+  timestamp: string;
+  actor: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  entityLabel: string;
+  details: string;
 }
 
 export interface PharmacyBranch {
@@ -130,6 +173,8 @@ export interface PurchaseOrderLine {
   medicineName: string;
   quantity: number;
   unitCost: number;
+  batchNumber?: string;
+  expiryDate?: string;
 }
 
 export interface PurchaseOrder {
@@ -157,6 +202,17 @@ export interface DailyClosing {
   cardTotal: number;
   digitalTotal: number;
   notes: string;
+}
+
+export interface ExpenseEntry {
+  id: string;
+  date: string;
+  branchId: string;
+  category: string;
+  description: string;
+  amount: number;
+  recordedBy: string;
+  createdAt: string;
 }
 
 export interface ShiftHandover {

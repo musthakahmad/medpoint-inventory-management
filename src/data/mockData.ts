@@ -15,24 +15,6 @@ export const INITIAL_BRANCHES: PharmacyBranch[] = [
     phone: '+91 98470 11223',
     licenseNumber: 'DL-2024-KER-88902',
     isMain: true,
-  },
-  {
-    id: 'br-medpoint-02',
-    name: 'MedPoint Specialty Care & Express Clinic',
-    city: 'Trivandrum',
-    district: 'Thiruvananthapuram',
-    address: 'Opp. General Hospital Gate 2, Kowdiar, Trivandrum',
-    phone: '+91 98470 33445',
-    licenseNumber: 'DL-2024-KER-99411',
-  },
-  {
-    id: 'br-medpoint-03',
-    name: 'MedPoint Apex Hospital Store',
-    city: 'Calicut',
-    district: 'Kozhikode',
-    address: 'Near Aster MIMS, Mini Bypass Road, Kozhikode',
-    phone: '+91 98470 55667',
-    licenseNumber: 'DL-2024-KER-77120',
   }
 ];
 
@@ -68,6 +50,22 @@ export const INITIAL_SALESMEN: Salesman[] = [
     joinDate: '2023-04-10',
   }
 ];
+
+type DemoStockProduct = Pick<Medicine, 'id' | 'code' | 'name' | 'genericName' | 'category' | 'form' | 'dosage' | 'price' | 'manufacturer' | 'section'>;
+
+const createDemoStockProducts = (products: DemoStockProduct[]): Medicine[] => products.map((product, index) => ({
+  ...product,
+  costPrice: product.price,
+  stock: 20,
+  minStockThreshold: 5,
+  requiresPrescription: false,
+  rackNumber: 'Rack E',
+  boxNumber: `Box #E-${String(index + 1).padStart(2, '0')}`,
+  shelfLevel: 'Level 1 (Top Shelf)',
+  expiryDate: '2028-12-31',
+  batchNumber: `DEMO-${product.code}`,
+  description: 'Sample stock entry. Confirm supplier price, quantity, batch, and expiry before using this catalogue for real sales.',
+}));
 
 export const INITIAL_PRODUCTS: Medicine[] = [
   {
@@ -309,8 +307,37 @@ export const INITIAL_PRODUCTS: Medicine[] = [
     description: 'Combination antibiotic and corticosteroid sterile ophthalmic solution for eye infections.',
     sideEffects: 'Store below 25°C. Discard 30 days after opening.',
     image: 'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?auto=format&fit=crop&w=500&q=80',
-  }
+  },
+  ...createDemoStockProducts([
+    { id: 'skin-skarfix-plus', code: 'MED-2001', name: 'Fixderma Skarfix-Plus Hyperpigmentation Cream', genericName: 'Skarfix-Plus cream', category: 'Dermatology & Topicals', form: 'Cream', dosage: '15g', price: 300, manufacturer: 'Fixderma', section: 'Section E1 - Dermatology & Skin Care' },
+    { id: 'skin-excela-moisturiser', code: 'MED-2002', name: 'Cipla Excela Moisturiser', genericName: 'Excela moisturiser', category: 'Dermatology & Topicals', form: 'Cream', dosage: '50g', price: 475, manufacturer: 'Cipla', section: 'Section E1 - Dermatology & Skin Care' },
+    { id: 'skin-minimalist-vitamin-c', code: 'MED-2003', name: 'Minimalist 10% Vitamin C Face Serum', genericName: 'Vitamin C face serum', category: 'Dermatology & Topicals', form: 'Serum', dosage: '30ml', price: 389, manufacturer: 'Minimalist', section: 'Section E1 - Dermatology & Skin Care' },
+    { id: 'skin-cetaphil-cream', code: 'MED-2004', name: 'Cetaphil Moisturising Cream', genericName: 'Moisturising cream', category: 'Dermatology & Topicals', form: 'Cream', dosage: '50g', price: 440, manufacturer: 'Cetaphil', section: 'Section E1 - Dermatology & Skin Care' },
+    { id: 'skin-acmist-cream', code: 'MED-2005', name: 'Brinton Acmist Moisturising Cream', genericName: 'Acmist moisturising gel', category: 'Dermatology & Topicals', form: 'Gel', dosage: '50g', price: 375, manufacturer: 'Brinton', section: 'Section E1 - Dermatology & Skin Care' },
+    { id: 'wash-bodywise-benzoyl', code: 'MED-2006', name: 'Be Bodywise 2.5% Benzoyl Peroxide Body Wash', genericName: 'Benzoyl peroxide body wash', category: 'Dermatology & Topicals', form: 'Body Wash', dosage: '250ml', price: 260, manufacturer: 'Be Bodywise', section: 'Section E1 - Dermatology & Skin Care' },
+    { id: 'wash-chemist-play', code: 'MED-2007', name: 'Chemist At Play 4% Exfoliating Body Wash', genericName: 'Exfoliating body wash', category: 'Dermatology & Topicals', form: 'Body Wash', dosage: '236ml', price: 360, manufacturer: 'Chemist At Play', section: 'Section E1 - Dermatology & Skin Care' },
+    { id: 'wash-dermaco-salicylic', code: 'MED-2008', name: 'The Derma Co 1% Salicylic Acid Exfoliating Wash', genericName: 'Salicylic acid exfoliating wash', category: 'Dermatology & Topicals', form: 'Body Wash', dosage: '250ml', price: 325, manufacturer: 'The Derma Co', section: 'Section E1 - Dermatology & Skin Care' },
+    { id: 'soap-ketocip', code: 'MED-2009', name: 'Ketocip Ketoconazole Medicated Soap', genericName: 'Ketoconazole soap', category: 'Dermatology & Topicals', form: 'Soap', dosage: '75g', price: 125, manufacturer: 'Cipla', section: 'Section E1 - Dermatology & Skin Care' },
+    { id: 'soap-skinology', code: 'MED-2010', name: 'Skinology Prickly Heat Medicated Soap', genericName: 'Prickly heat soap', category: 'Dermatology & Topicals', form: 'Soap', dosage: '75g', price: 105, manufacturer: 'Skinology', section: 'Section E1 - Dermatology & Skin Care' },
+    { id: 'medicine-volini-gel', code: 'MED-2011', name: 'Volini Pain Relief Gel', genericName: 'Pain relief gel', category: 'Pain Relievers & Analgesics', form: 'Gel', dosage: '75g', price: 260, manufacturer: 'Volini', section: 'Section E2 - Pain Relief & OTC' },
+    { id: 'medicine-liv52-ds', code: 'MED-2012', name: 'Himalaya Liv.52 DS Tablets', genericName: 'Liv.52 DS tablets', category: 'Vitamins & Supplements', form: 'Tablet', dosage: '60 tablets', price: 180, manufacturer: 'Himalaya', section: 'Section E3 - Vitamins & Nutrition' },
+    { id: 'medicine-zincovit', code: 'MED-2013', name: 'Zincovit Tablets', genericName: 'Multivitamin and mineral tablets', category: 'Vitamins & Supplements', form: 'Tablet', dosage: '15 tablets', price: 110, manufacturer: 'Apex Laboratories', section: 'Section E3 - Vitamins & Nutrition' },
+    { id: 'medicine-dolo-650', code: 'MED-2014', name: 'Dolo 650 Tablets', genericName: 'Paracetamol tablets', category: 'Pain Relievers & Analgesics', form: 'Tablet', dosage: '15 tablets × 650mg', price: 33, manufacturer: 'Micro Labs', section: 'Section E2 - Pain Relief & OTC' },
+    { id: 'medicine-electral-ors', code: 'MED-2015', name: 'Electral ORS Powder', genericName: 'Oral rehydration salts', category: 'Gastrointestinal Care', form: 'Sachet', dosage: '21.8g sachet', price: 20, manufacturer: 'FDC Limited', section: 'Section E2 - Pain Relief & OTC' },
+    { id: 'nutrition-ritebite-fruit-nut', code: 'MED-2016', name: 'RiteBite Max Protein Daily Fruit & Nut Bar', genericName: 'Fruit and nut protein bar', category: 'Vitamins & Supplements', form: 'Bar', dosage: 'Pack of 6 bars', price: 440, manufacturer: 'RiteBite', section: 'Section E3 - Vitamins & Nutrition' },
+    { id: 'nutrition-yogabar-blueberry', code: 'MED-2017', name: 'Yoga Bar Blueberry Blast Daily Protein Bar', genericName: 'Blueberry protein bar', category: 'Vitamins & Supplements', form: 'Bar', dosage: 'Pack of 6 bars', price: 390, manufacturer: 'Yoga Bar', section: 'Section E3 - Vitamins & Nutrition' },
+    { id: 'nutrition-muscleblaze-bar', code: 'MED-2018', name: 'MuscleBlaze Fuel One Protein Bar', genericName: 'Protein bar', category: 'Vitamins & Supplements', form: 'Bar', dosage: 'Pack of 6 bars', price: 410, manufacturer: 'MuscleBlaze', section: 'Section E3 - Vitamins & Nutrition' },
+    { id: 'nutrition-amul-lassi', code: 'MED-2019', name: 'Amul High Protein Lassi', genericName: 'High-protein lassi', category: 'Vitamins & Supplements', form: 'Drink', dosage: '200ml tetra pack × 4', price: 110, manufacturer: 'Amul', section: 'Section E3 - Vitamins & Nutrition' },
+    { id: 'nutrition-ensure-drink', code: 'MED-2020', name: 'Ensure High Protein Drink', genericName: 'High-protein nutrition drink', category: 'Vitamins & Supplements', form: 'Drink', dosage: '200ml bottle', price: 120, manufacturer: 'Ensure', section: 'Section E3 - Vitamins & Nutrition' },
+    { id: 'device-morepen-thermometer', code: 'MED-2021', name: 'Dr. Morepen DigiClassic Digital Thermometer', genericName: 'Digital thermometer', category: 'Medical Supplies', form: 'Medical Device', dosage: '1 device', price: 245, manufacturer: 'Dr. Morepen', section: 'Section E4 - Medical Devices & Accessories' },
+    { id: 'device-hicks-thermometer', code: 'MED-2022', name: 'Hicks Digital Waterproof Thermometer', genericName: 'Waterproof digital thermometer', category: 'Medical Supplies', form: 'Medical Device', dosage: '1 device', price: 200, manufacturer: 'Hicks', section: 'Section E4 - Medical Devices & Accessories' },
+    { id: 'device-hansaplast-bandage', code: 'MED-2023', name: 'Hansaplast Cotton Crepe Bandage', genericName: 'Cotton crepe bandage', category: 'Medical Supplies', form: 'Bandage', dosage: '10cm × 4m', price: 230, manufacturer: 'Hansaplast', section: 'Section E4 - Medical Devices & Accessories' },
+    { id: 'device-dynamik-tape', code: 'MED-2024', name: 'Dynamik Kinesiology Sports Recovery Tape', genericName: 'Kinesiology sports tape', category: 'Medical Supplies', form: 'Tape', dosage: '1 roll', price: 375, manufacturer: 'Dynamik', section: 'Section E4 - Medical Devices & Accessories' },
+    { id: 'device-flamingo-gel-bag', code: 'MED-2025', name: 'Flamingo Orthopaedic Heating Gel Bag', genericName: 'Orthopaedic heating gel bag', category: 'Medical Supplies', form: 'Medical Device', dosage: '1 bag', price: 425, manufacturer: 'Flamingo', section: 'Section E4 - Medical Devices & Accessories' },
+  ]),
 ];
+
+export const ADDITIONAL_STOCK_PRODUCTS = INITIAL_PRODUCTS.filter((medicine) => /^MED-20(?:0[1-9]|1[0-9]|2[0-5])$/.test(medicine.code));
 
 export const INITIAL_ORDERS: Order[] = [
   {

@@ -45,10 +45,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const totalRevenue = completedOrders.reduce((sum, order) => sum + order.total, 0);
   const totalProfit = completedOrders.reduce((sum, order) => sum + order.profit, 0);
   const lowStockCount = medicines.filter((medicine) => medicine.stock <= medicine.minStockThreshold).length;
-  const expiringCount = medicines.filter((medicine) => {
-    const daysLeft = (new Date(medicine.expiryDate).getTime() - Date.now()) / 86400000;
-    return daysLeft >= 0 && daysLeft <= 60;
-  }).length;
+  const expiringCount = medicines.reduce((count, medicine) => count + (medicine.batches || [{ expiryDate: medicine.expiryDate, quantity: medicine.stock }]).filter((batch) => {
+    const daysLeft = (new Date(`${batch.expiryDate}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000;
+    return batch.quantity > 0 && daysLeft >= 0 && daysLeft <= 60;
+  }).length, 0);
   const results = quickSearch.trim()
     ? medicines.filter((medicine) =>
         [medicine.name, medicine.genericName, medicine.code, medicine.boxNumber]
@@ -105,7 +105,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <section className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <span className="mr-auto text-sm font-semibold text-slate-800">Sales insights</span>
         <label className="text-xs text-slate-500">Period<select className="ml-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700" value={range} onChange={(event) => setRange(event.target.value as typeof range)}><option value="today">Today</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="all">All time</option></select></label>
-        <label className="text-xs text-slate-500">Branch<select className="ml-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700" value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}><option value="all">All branches</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label>
+        {branches.length > 1 && <label className="text-xs text-slate-500">Branch<select className="ml-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700" value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}><option value="all">All branches</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label>}
         <label className="text-xs text-slate-500">Staff<select className="ml-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700" value={salesmanFilter} onChange={(event) => setSalesmanFilter(event.target.value)}><option value="all">All staff</option>{salesmen.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
       </section>
 
@@ -124,7 +124,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       <div className="grid gap-4 xl:grid-cols-[1.2fr_.8fr]">
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-start justify-between"><div><h3 className="font-semibold text-slate-900">Revenue trend</h3><p className="mt-1 text-sm text-slate-500">Daily sales over the last seven days</p></div><span className="text-xs text-slate-400">{branchFilter === 'all' ? 'All branches' : branches.find((branch) => branch.id === branchFilter)?.city}</span></div>
+          <div className="flex items-start justify-between"><div><h3 className="font-semibold text-slate-900">Revenue trend</h3><p className="mt-1 text-sm text-slate-500">Daily sales over the last seven days</p></div><span className="text-xs text-slate-400">{branches.length === 1 ? currentBranch.city : branchFilter === 'all' ? 'All branches' : branches.find((branch) => branch.id === branchFilter)?.city}</span></div>
           <div className="mt-6 flex h-40 items-end gap-3 sm:gap-5">{revenueByDay.map((day) => <div key={day.label} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2"><span className="max-w-full truncate text-[10px] text-slate-500" title={`₹${day.revenue.toLocaleString('en-IN')}`}>{day.revenue ? `₹${Math.round(day.revenue).toLocaleString('en-IN')}` : ''}</span><div className="flex w-full flex-1 items-end"><div className="w-full rounded-t-md bg-gradient-to-t from-teal-700 to-cyan-500" style={{ height: `${Math.max(day.revenue ? (day.revenue / maxDailyRevenue) * 100 : 0, day.revenue ? 9 : 2)}%` }}/></div><span className="text-xs text-slate-500">{day.label}</span></div>)}</div>
         </section>
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="font-semibold text-slate-900">Top medicines</h3><p className="mt-1 text-sm text-slate-500">Units sold in the selected period</p><div className="mt-4 divide-y divide-slate-100">{bestSellers.length === 0 ? <p className="py-6 text-center text-sm text-slate-500">No sales in this period.</p> : bestSellers.map((medicine, index) => <div key={medicine.name} className="flex items-center gap-3 py-3"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-50 text-xs font-semibold text-teal-800">{index + 1}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-slate-800">{medicine.name}</p><p className="text-xs text-slate-500">{medicine.quantity} units</p></div><span className="text-sm font-semibold text-slate-700">₹{medicine.revenue.toLocaleString('en-IN')}</span></div>)}</div></section>

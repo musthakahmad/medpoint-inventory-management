@@ -1,23 +1,26 @@
 import React, { useMemo, useState } from 'react';
 import { ClipboardCheck, ClipboardList, Clock3, PackagePlus, Plus, Truck } from 'lucide-react';
-import { DailyClosing, InventoryLog, Medicine, PharmacyBranch, PurchaseOrder, ShiftHandover, Supplier } from '../types';
+import { AuditEvent, DailyClosing, ExpenseEntry, InventoryLog, Medicine, PharmacyBranch, PurchaseOrder, ShiftHandover, Supplier } from '../types';
 
-type OperationView = 'movement' | 'purchasing' | 'closing' | 'handover';
+type OperationView = 'movement' | 'audit' | 'purchasing' | 'report' | 'closing' | 'handover';
 
 interface OperationsProps {
   medicines: Medicine[];
   logs: InventoryLog[];
+  auditEvents: AuditEvent[];
   orders: import('../types').Order[];
   salesmen: import('../types').Salesman[];
   currentBranch: PharmacyBranch;
   suppliers: Supplier[];
   purchaseOrders: PurchaseOrder[];
   closings: DailyClosing[];
+  expenses: ExpenseEntry[];
   handovers: ShiftHandover[];
   onAddSupplier: (supplier: Omit<Supplier, 'id'>) => void;
   onCreatePurchaseOrder: (order: Omit<PurchaseOrder, 'id'>) => void;
   onReceivePurchaseOrder: (order: PurchaseOrder) => void;
   onCreateClosing: (closing: Omit<DailyClosing, 'id'>) => void;
+  onAddExpense: (expense: Omit<ExpenseEntry, 'id'>) => void;
   onCreateHandover: (handover: Omit<ShiftHandover, 'id'>) => void;
 }
 
@@ -34,7 +37,7 @@ const inputClass = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2
 const buttonClass = 'inline-flex items-center justify-center gap-2 rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50';
 
 export const Operations: React.FC<OperationsProps> = (props) => {
-  const { medicines, logs, orders, salesmen, currentBranch, suppliers, purchaseOrders, closings, handovers } = props;
+  const { medicines, logs, auditEvents, orders, salesmen, currentBranch, suppliers, purchaseOrders, closings, expenses, handovers } = props;
   const [view, setView] = useState<OperationView>('movement');
   const [supplierName, setSupplierName] = useState('');
   const [supplierContact, setSupplierContact] = useState('');
@@ -44,12 +47,19 @@ export const Operations: React.FC<OperationsProps> = (props) => {
   const [poSupplierId, setPoSupplierId] = useState(suppliers[0]?.id || '');
   const [poMedicineId, setPoMedicineId] = useState(medicines[0]?.id || '');
   const [poQuantity, setPoQuantity] = useState(20);
+  const [poBatchNumber, setPoBatchNumber] = useState(`PO-BATCH-${Date.now().toString().slice(-5)}`);
+  const [poExpiryDate, setPoExpiryDate] = useState('2027-12-31');
   const [closeNotes, setCloseNotes] = useState('');
   const [handoverFrom, setHandoverFrom] = useState(salesmen[0]?.name || '');
   const [handoverTo, setHandoverTo] = useState(salesmen[1]?.name || salesmen[0]?.name || '');
   const [handoverNotes, setHandoverNotes] = useState('');
   const [pendingTasks, setPendingTasks] = useState('');
   const [movementSearch, setMovementSearch] = useState('');
+  const [auditSearch, setAuditSearch] = useState('');
+  const [reportDate, setReportDate] = useState(todayKey());
+  const [expenseCategory, setExpenseCategory] = useState('Utilities');
+  const [expenseDescription, setExpenseDescription] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState('');
 
   const today = todayKey();
   const todayOrders = orders.filter((order) => order.branchId === currentBranch.id && localDateKey(order.timestamp) === today && order.status === 'Completed');
@@ -58,6 +68,13 @@ export const Operations: React.FC<OperationsProps> = (props) => {
   const digitalTotal = todayOrders.filter((order) => !['Cash', 'Card'].includes(order.paymentMethod)).reduce((sum, order) => sum + order.total, 0);
   const closedToday = closings.find((closing) => closing.branchId === currentBranch.id && closing.date === today);
   const orderedValue = purchaseOrders.filter((order) => order.status === 'Ordered').reduce((sum, order) => sum + order.total, 0);
+  const reportOrders = orders.filter((order) => order.branchId === currentBranch.id && localDateKey(order.timestamp) === reportDate && order.status === 'Completed');
+  const reportExpenses = expenses.filter((expense) => expense.branchId === currentBranch.id && expense.date === reportDate);
+  const reportRevenue = reportOrders.reduce((sum, order) => sum + order.total, 0);
+  const reportCostOfSales = reportOrders.reduce((sum, order) => sum + order.costTotal, 0);
+  const reportGrossProfit = reportOrders.reduce((sum, order) => sum + order.profit, 0);
+  const reportExpenseTotal = reportExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const reportNetProfit = reportGrossProfit - reportExpenseTotal;
 
   const movements = useMemo(() => logs.filter((log) => `${log.medicineName} ${log.reason || ''} ${log.performedBy || ''}`.toLowerCase().includes(movementSearch.toLowerCase())), [logs, movementSearch]);
 
@@ -78,10 +95,10 @@ export const Operations: React.FC<OperationsProps> = (props) => {
     props.onCreatePurchaseOrder({
       orderNumber: `PO-${String(Date.now()).slice(-6)}`, supplierId: supplier.id, supplierName: supplier.name,
       createdAt: now.toISOString(), expectedAt: expected.toISOString(), status: 'Ordered',
-      items: [{ medicineId: medicine.id, medicineName: medicine.name, quantity: Number(poQuantity), unitCost: medicine.costPrice }],
+      items: [{ medicineId: medicine.id, medicineName: medicine.name, quantity: Number(poQuantity), unitCost: medicine.costPrice, batchNumber: poBatchNumber.trim(), expiryDate: poExpiryDate }],
       total: Number(poQuantity) * medicine.costPrice,
     });
-    setPoQuantity(20);
+    setPoQuantity(20); setPoBatchNumber(`PO-BATCH-${Date.now().toString().slice(-5)}`);
   };
 
   const closeDay = () => {
@@ -97,9 +114,28 @@ export const Operations: React.FC<OperationsProps> = (props) => {
     setHandoverNotes(''); setPendingTasks('');
   };
 
+  const saveExpense = (event: React.FormEvent) => {
+    event.preventDefault();
+    const amount = Number(expenseAmount);
+    if (!Number.isFinite(amount) || amount <= 0 || !expenseDescription.trim()) return;
+    props.onAddExpense({
+      date: reportDate,
+      branchId: currentBranch.id,
+      category: expenseCategory,
+      description: expenseDescription.trim(),
+      amount: Math.round(amount * 100) / 100,
+      recordedBy: salesmen.find((person) => person.status === 'On Duty')?.name || 'Pharmacy Manager',
+      createdAt: new Date().toISOString(),
+    });
+    setExpenseDescription('');
+    setExpenseAmount('');
+  };
+
   const tabs: { id: OperationView; label: string; icon: React.ElementType }[] = [
     { id: 'movement', label: 'Stock movement', icon: ClipboardList },
+    { id: 'audit', label: 'Audit trail', icon: ClipboardCheck },
     { id: 'purchasing', label: 'Suppliers & orders', icon: Truck },
+    { id: 'report', label: 'Daily sales & expenses', icon: ClipboardList },
     { id: 'closing', label: 'Daily closing', icon: ClipboardCheck },
     { id: 'handover', label: 'Shift handover', icon: Clock3 },
   ];
@@ -119,13 +155,54 @@ export const Operations: React.FC<OperationsProps> = (props) => {
       <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{['Date & time','Medicine','Movement','Change','Stock after','Reason','Staff'].map((label) => <th key={label} className="px-4 py-3 font-semibold">{label}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{movements.length === 0 ? <tr><td colSpan={7} className="p-8 text-center text-slate-500">No stock movements match this search.</td></tr> : movements.map((log) => <tr key={log.id} className="hover:bg-teal-50/40"><td className="whitespace-nowrap px-4 py-3 text-slate-500">{new Date(log.timestamp).toLocaleString()}</td><td className="px-4 py-3 font-medium text-slate-900">{log.medicineName}</td><td className="px-4 py-3 capitalize text-slate-600">{log.type.replace('_', ' ')}</td><td className={`px-4 py-3 font-semibold ${log.quantityChange > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{log.quantityChange > 0 ? '+' : ''}{log.quantityChange}</td><td className="px-4 py-3 text-slate-700">{log.newStock}</td><td className="max-w-64 truncate px-4 py-3 text-slate-500">{log.reason || '—'}</td><td className="px-4 py-3 text-slate-600">{log.performedBy || '—'}</td></tr>)}</tbody></table></div>
     </section>}
 
+    {view === 'audit' && <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5"><div><h3 className="font-semibold text-slate-900">Audit trail</h3><p className="mt-1 text-sm text-slate-500">Recorded medicine creation, edits, deletion, and stock changes. Demo mode records the selected staff name.</p></div><input aria-label="Search audit trail" className={`${inputClass} max-w-xs`} placeholder="Search activity, item, or staff" value={auditSearch} onChange={(event) => setAuditSearch(event.target.value)}/></div>
+      <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{['Date & time','Staff','Action','Record','Details'].map((label) => <th key={label} className="px-4 py-3 font-semibold">{label}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{auditEvents.filter((event) => `${event.actor} ${event.action} ${event.entityLabel} ${event.details}`.toLowerCase().includes(auditSearch.toLowerCase())).length === 0 ? <tr><td colSpan={5} className="p-8 text-center text-slate-500">No audit activity matches this search.</td></tr> : auditEvents.filter((event) => `${event.actor} ${event.action} ${event.entityLabel} ${event.details}`.toLowerCase().includes(auditSearch.toLowerCase())).map((event) => <tr key={event.id} className="hover:bg-teal-50/40"><td className="whitespace-nowrap px-4 py-3 text-slate-500">{new Date(event.timestamp).toLocaleString()}</td><td className="px-4 py-3 font-medium text-slate-800">{event.actor}</td><td className="px-4 py-3 text-slate-700">{event.action}</td><td className="px-4 py-3 text-slate-700">{event.entityType}: {event.entityLabel}</td><td className="px-4 py-3 text-slate-500">{event.details}</td></tr>)}</tbody></table></div>
+    </section>}
+
     {view === 'purchasing' && <div className="space-y-5">
       <div className="grid gap-5 xl:grid-cols-2">
         <form onSubmit={submitSupplier} className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div className="mb-1"><h3 className="font-semibold text-slate-900">Add supplier</h3><p className="mt-1 text-sm text-slate-500">Save vendor details for future purchase orders.</p></div><input className={inputClass} placeholder="Supplier name *" value={supplierName} onChange={(event) => setSupplierName(event.target.value)} required/><div className="grid gap-3 sm:grid-cols-2"><input className={inputClass} placeholder="Contact person" value={supplierContact} onChange={(event) => setSupplierContact(event.target.value)}/><input className={inputClass} placeholder="Phone" value={supplierPhone} onChange={(event) => setSupplierPhone(event.target.value)}/></div><div className="grid gap-3 sm:grid-cols-2"><input className={inputClass} type="email" placeholder="Email" value={supplierEmail} onChange={(event) => setSupplierEmail(event.target.value)}/><label className="text-xs text-slate-500">Lead time (days)<input className={`${inputClass} mt-1`} type="number" min="0" value={leadTime} onChange={(event) => setLeadTime(Number(event.target.value))}/></label></div><button className={buttonClass}><Plus size={16}/>Save supplier</button></form>
-        <form onSubmit={submitPurchaseOrder} className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div className="mb-1"><h3 className="font-semibold text-slate-900">Create purchase order</h3><p className="mt-1 text-sm text-slate-500">Orders stay open until the delivery is received.</p></div><label className="block text-xs font-medium text-slate-600">Supplier<select className={`${inputClass} mt-1`} value={poSupplierId} onChange={(event) => setPoSupplierId(event.target.value)} required><option value="">Choose supplier</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label><label className="block text-xs font-medium text-slate-600">Medicine<select className={`${inputClass} mt-1`} value={poMedicineId} onChange={(event) => setPoMedicineId(event.target.value)}>{medicines.map((medicine) => <option key={medicine.id} value={medicine.id}>{medicine.name} · {money(medicine.costPrice)} / unit</option>)}</select></label><div className="flex items-end gap-3"><label className="flex-1 text-xs font-medium text-slate-600">Quantity<input className={`${inputClass} mt-1`} type="number" min="1" value={poQuantity} onChange={(event) => setPoQuantity(Number(event.target.value))}/></label><button className={buttonClass} disabled={!suppliers.length || !medicines.length}><PackagePlus size={16}/>Place order</button></div>{!suppliers.length && <p className="text-xs text-amber-700">Add a supplier before placing an order.</p>}</form>
+        <form onSubmit={submitPurchaseOrder} className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div className="mb-1"><h3 className="font-semibold text-slate-900">Create purchase order</h3><p className="mt-1 text-sm text-slate-500">Orders stay open until the delivery is received.</p></div><label className="block text-xs font-medium text-slate-600">Supplier<select className={`${inputClass} mt-1`} value={poSupplierId} onChange={(event) => setPoSupplierId(event.target.value)} required><option value="">Choose supplier</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label><label className="block text-xs font-medium text-slate-600">Medicine<select className={`${inputClass} mt-1`} value={poMedicineId} onChange={(event) => setPoMedicineId(event.target.value)}>{medicines.map((medicine) => <option key={medicine.id} value={medicine.id}>{medicine.name} · {money(medicine.costPrice)} / unit</option>)}</select></label><div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-medium text-slate-600">Expected batch number<input className={`${inputClass} mt-1`} value={poBatchNumber} onChange={(event) => setPoBatchNumber(event.target.value)} required/></label><label className="text-xs font-medium text-slate-600">Batch expiry<input className={`${inputClass} mt-1`} type="date" min={todayKey()} value={poExpiryDate} onChange={(event) => setPoExpiryDate(event.target.value)} required/></label></div><div className="flex items-end gap-3"><label className="flex-1 text-xs font-medium text-slate-600">Quantity<input className={`${inputClass} mt-1`} type="number" min="1" value={poQuantity} onChange={(event) => setPoQuantity(Number(event.target.value))}/></label><button className={buttonClass} disabled={!suppliers.length || !medicines.length}><PackagePlus size={16}/>Place order</button></div>{!suppliers.length && <p className="text-xs text-amber-700">Add a supplier before placing an order.</p>}</form>
       </div>
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"><div className="flex flex-wrap justify-between gap-2 border-b border-slate-100 p-5"><div><h3 className="font-semibold text-slate-900">Purchase orders</h3><p className="mt-1 text-sm text-slate-500">{money(orderedValue)} currently awaiting delivery</p></div><span className="text-sm text-slate-500">{purchaseOrders.length} total</span></div><div className="divide-y divide-slate-100">{purchaseOrders.length === 0 ? <p className="p-8 text-center text-sm text-slate-500">No purchase orders yet. Create one above.</p> : [...purchaseOrders].reverse().map((order) => <div key={order.id} className="flex flex-wrap items-center justify-between gap-4 p-4"><div><div className="flex items-center gap-2 font-semibold text-slate-900">{order.orderNumber}<span className={`rounded-full px-2 py-0.5 text-[11px] ${order.status === 'Received' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{order.status}</span></div><p className="mt-1 text-sm text-slate-600">{order.supplierName} · {order.items.map((item) => `${item.medicineName} × ${item.quantity}`).join(', ')}</p><p className="mt-1 text-xs text-slate-400">Expected {new Date(order.expectedAt).toLocaleDateString()}</p></div><div className="flex items-center gap-4"><strong className="text-slate-900">{money(order.total)}</strong>{order.status === 'Ordered' && <button className={buttonClass} onClick={() => props.onReceivePurchaseOrder(order)}>Mark received</button>}</div></div>)}</div></section>
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><h3 className="font-semibold text-slate-900">Supplier directory <span className="font-normal text-slate-400">({suppliers.length})</span></h3><div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{suppliers.map((supplier) => <div key={supplier.id} className="rounded-lg bg-slate-50 p-4"><p className="font-semibold text-slate-900">{supplier.name}</p><p className="mt-1 text-sm text-slate-600">{supplier.contactName || 'Contact not set'}</p><p className="text-sm text-slate-500">{supplier.phone || supplier.email || 'No contact details'}</p><p className="mt-2 text-xs text-teal-700">{supplier.leadTimeDays} day lead time</p></div>)}</div></section>
+    </div>}
+
+    {view === 'report' && <div className="space-y-5">
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div><h3 className="font-semibold text-slate-900">Daily sales & expenses</h3><p className="mt-1 text-sm text-slate-500">Review completed sales and recorded operating expenses for a selected day.</p></div>
+        <label className="text-sm font-medium text-slate-600">Report date<input aria-label="Report date" className={`${inputClass} mt-1`} type="date" value={reportDate} onChange={(event) => setReportDate(event.target.value)}/></label>
+      </section>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {[
+          { label: 'Sales revenue', value: reportRevenue, tone: 'bg-teal-50 text-teal-800' },
+          { label: 'Medicine cost sold', value: reportCostOfSales, tone: 'bg-slate-50 text-slate-700' },
+          { label: 'Gross profit', value: reportGrossProfit, tone: 'bg-emerald-50 text-emerald-800' },
+          { label: 'Operating expenses', value: reportExpenseTotal, tone: 'bg-amber-50 text-amber-800' },
+          { label: 'Profit after expenses', value: reportNetProfit, tone: reportNetProfit >= 0 ? 'bg-cyan-50 text-cyan-800' : 'bg-rose-50 text-rose-800' },
+        ].map((metric) => <article key={metric.label} className={`rounded-xl border border-slate-200 p-4 ${metric.tone}`}><p className="text-xs font-medium">{metric.label}</p><p className="mt-2 text-xl font-bold">{money(metric.value)}</p></article>)}
+      </div>
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h4 className="font-semibold text-slate-900">Payment totals</h4><p className="mt-1 text-xs text-slate-500">{reportOrders.length} completed sale(s)</p></div><span className="text-sm font-semibold text-slate-800">Total: {money(reportRevenue)}</span></div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{(['Cash', 'Card', 'UPI / QR', 'Insurance Claim', 'Digital Wallet'] as const).map((method) => <div key={method} className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm"><span className="text-slate-600">{method}</span><strong className="text-slate-900">{money(reportOrders.filter((order) => order.paymentMethod === method).reduce((sum, order) => sum + order.total, 0))}</strong></div>)}</div>
+      </section>
+      <div className="grid gap-5 xl:grid-cols-2">
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 p-5"><h4 className="font-semibold text-slate-900">Sales for {reportDate}</h4></div>
+          <div className="divide-y divide-slate-100">{reportOrders.length === 0 ? <p className="p-6 text-sm text-slate-500">No completed sales recorded for this day.</p> : reportOrders.map((order) => <div key={order.id} className="flex flex-wrap items-center justify-between gap-2 p-4"><div><p className="text-sm font-semibold text-slate-900">{order.orderNumber} · {order.customerName || 'Walk-in customer'}</p><p className="mt-1 text-xs text-slate-500">{new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {order.paymentMethod} · {order.salesmanName}</p></div><strong className="text-sm text-slate-900">{money(order.total)}</strong></div>)}</div>
+        </section>
+        <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <form onSubmit={saveExpense} className="space-y-3">
+            <div><h4 className="font-semibold text-slate-900">Record an expense</h4><p className="mt-1 text-xs text-slate-500">This expense will be saved under {reportDate}.</p></div>
+            <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-medium text-slate-600">Category<select className={`${inputClass} mt-1`} value={expenseCategory} onChange={(event) => setExpenseCategory(event.target.value)}>{['Utilities', 'Rent', 'Salaries', 'Transport', 'Supplies', 'Maintenance', 'Other'].map((category) => <option key={category}>{category}</option>)}</select></label><label className="text-xs font-medium text-slate-600">Amount (₹)<input className={`${inputClass} mt-1`} type="number" min="0.01" step="0.01" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value)} placeholder="0.00" required/></label></div>
+            <label className="block text-xs font-medium text-slate-600">Description<input className={`${inputClass} mt-1`} value={expenseDescription} onChange={(event) => setExpenseDescription(event.target.value)} placeholder="e.g. Electricity bill" required/></label>
+            <button className={buttonClass} disabled={!expenseAmount || !expenseDescription.trim()}><Plus size={16}/>Save expense</button>
+          </form>
+          <div className="border-t border-slate-100 pt-3"><div className="mb-2 flex justify-between"><h4 className="text-sm font-semibold text-slate-900">Expenses for this day</h4><strong className="text-sm text-amber-800">{money(reportExpenseTotal)}</strong></div><div className="divide-y divide-slate-100">{reportExpenses.length === 0 ? <p className="py-4 text-sm text-slate-500">No expenses recorded for this day.</p> : reportExpenses.map((expense) => <div key={expense.id} className="flex justify-between gap-3 py-3"><div><p className="text-sm font-medium text-slate-800">{expense.description}</p><p className="mt-1 text-xs text-slate-500">{expense.category} · recorded by {expense.recordedBy}</p></div><strong className="text-sm text-slate-900">{money(expense.amount)}</strong></div>)}</div></div>
+        </section>
+      </div>
+      <p className="text-xs text-slate-500">Profit after expenses = sales profit after medicine cost, minus operating expenses recorded here. Purchase orders are not included as daily expenses.</p>
     </div>}
 
     {view === 'closing' && <div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">

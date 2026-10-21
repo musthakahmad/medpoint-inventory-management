@@ -18,6 +18,11 @@ Pharmacies handle many products with different batches, expiry dates, storage lo
 - **Staff management:** Maintain sales staff records and view sales performance and duty status.
 - **Pharmacy operations:** Record stock movements, manage suppliers and purchase orders, receive deliveries, and prepare daily closings and shift handovers.
 - **Multi-branch context:** Represent multiple pharmacy branches and associate sales and operational records with a branch.
+- **Data backup and restore:** Export the browser's current MedPoint records to a JSON backup and restore a supported backup after confirmation.
+- **Batch-level stock:** Record separate batch numbers, expiry dates, costs, and quantities when restocking. Sales consume eligible batches in earliest-expiry-first order; refunds restore the recorded batch allocations.
+- **Expiry safeguards:** Highlight expired and soon-to-expire batches in stock alerts and prevent expired batches from being sold.
+- **Audit trail:** Record medicine creation, edits, deletion, stock changes, completed sales, and refunds with a timestamp, staff label, and details.
+- **Prototype notice:** Clearly tell users that the app uses sample records and browser-local storage.
 
 ## Intended users
 
@@ -25,4 +30,4 @@ The application is intended for pharmacy owners, managers, pharmacists, and coun
 
 ## Implementation and current scope
 
-MedPoint is implemented as a React and TypeScript single-page web application, built with Vite and styled with Tailwind CSS. Its current records are initialized from sample data and saved in the browser's local storage. This makes the project useful as a demonstrable front-end prototype; it does not currently provide a shared server-side database or synchronization between devices or branches.
+MedPoint is implemented as a React and TypeScript single-page web application, built with Vite and styled with Tailwind CSS. Its records are initialized from sample data and saved in the browser's local storage. Users can export and restore a JSON backup, but application records are not yet synchronized across devices or branches. A Supabase schema starter is provided in `SUPABASE_SETUP.sql`; connecting the app to it still requires project configuration and explicit approval to transfer pharmacy records. Production use also requires tested authentication, role enforcement, and a server-backed audit trail. The included records are examples and should not be treated as live pharmacy data.

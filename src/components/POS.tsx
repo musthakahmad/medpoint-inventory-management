@@ -1,4 +1,5 @@
 import React from 'react';
+import QRCode from 'qrcode';
 import {
   Search,
   Plus,
@@ -37,7 +38,7 @@ interface POSProps {
   onUpdateDosageNotes: (index: number, notes: string) => void;
   onRemoveFromCart: (index: number) => void;
   onClearCart: () => void;
-  onCompleteOrder: () => void;
+  onCompleteOrder: (cashReceived?: number) => void;
 }
 
 export const POS: React.FC<POSProps> = ({
@@ -62,8 +63,14 @@ export const POS: React.FC<POSProps> = ({
   onClearCart,
   onCompleteOrder,
 }) => {
+  const availableStock = (medicine: Medicine) => (medicine.batches || [{ expiryDate: medicine.expiryDate, quantity: medicine.stock }])
+    .filter((batch) => batch.quantity > 0 && new Date(`${batch.expiryDate}T00:00:00`).getTime() >= new Date(new Date().toDateString()).getTime())
+    .reduce((total, batch) => total + batch.quantity, 0);
   const [selectedCategory, setSelectedCategory] = React.useState<string>('All');
   const [searchQuery, setSearchQuery] = React.useState<string>('');
+  const [cashReceived, setCashReceived] = React.useState('');
+  const [upiPaymentConfirmed, setUpiPaymentConfirmed] = React.useState(false);
+  const [upiQrDataUrl, setUpiQrDataUrl] = React.useState('');
 
   const categories: string[] = [
     'All',
@@ -97,6 +104,30 @@ export const POS: React.FC<POSProps> = ({
   const taxAmount = Math.round(taxableSubtotal * 0.05 * 100) / 100; // 5% Healthcare Tax
   const grandTotal = Math.round((taxableSubtotal + taxAmount) * 100) / 100;
   const estimatedProfit = Math.max(0, grandTotal - costTotal);
+  const cashReceivedAmount = Number(cashReceived);
+  const changeDue = Math.max(0, cashReceivedAmount - grandTotal);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    if (paymentMethod !== 'UPI / QR' || cart.length === 0) {
+      setUpiQrDataUrl('');
+      return () => { cancelled = true; };
+    }
+
+    const paymentUri = `upi://pay?${new URLSearchParams({
+      pa: 'musthakmustha786@oksbi',
+      pn: 'MAHAMMAD MUSTHAK',
+      am: grandTotal.toFixed(2),
+      cu: 'INR',
+      tn: 'MedPoint pharmacy bill',
+    }).toString()}`;
+
+    QRCode.toDataURL(paymentUri, { errorCorrectionLevel: 'M', margin: 2, width: 320 })
+      .then((dataUrl) => { if (!cancelled) setUpiQrDataUrl(dataUrl); })
+      .catch(() => { if (!cancelled) setUpiQrDataUrl(''); });
+
+    return () => { cancelled = true; };
+  }, [paymentMethod, cart.length, grandTotal]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-100px)] animate-in fade-in duration-300">
@@ -153,7 +184,8 @@ export const POS: React.FC<POSProps> = ({
           ) : (
             filteredMedicines.map((med) => {
               const isLowStock = med.stock <= med.minStockThreshold && med.stock > 0;
-              const isOutOfStock = med.stock <= 0;
+              const saleableStock = availableStock(med);
+              const isOutOfStock = saleableStock <= 0;
               const inCartItem = cart.find((item) => item.medicine.id === med.id);
 
               return (
@@ -177,7 +209,7 @@ export const POS: React.FC<POSProps> = ({
                     </div>
 
                     <div className="text-right">
-                      <span className="text-sm font-extrabold text-slate-900">₹{med.price.toFixed(2)}</span>
+                      <span className="billing-medicine-amount text-sm font-extrabold" style={{ color: '#111827' }}>₹{med.price.toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -201,7 +233,7 @@ export const POS: React.FC<POSProps> = ({
 
                     <div className="pt-1 border-t border-slate-100 flex items-center justify-between">
                       <span className={`text-[10px] font-bold ${isOutOfStock ? 'text-rose-600' : isLowStock ? 'text-amber-600' : 'text-emerald-600'}`}>
-                        {med.stock} Packs Left
+                        {saleableStock} Unexpired Packs Left
                       </span>
 
                       <button
@@ -327,7 +359,7 @@ export const POS: React.FC<POSProps> = ({
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                       <span className="cart-rate-badge">Rate ₹{item.medicine.price.toFixed(2)} / unit</span>
                       <span className="text-slate-500">× {item.quantity} =</span>
-                      <strong className="text-slate-900">₹{(item.medicine.price * item.quantity).toFixed(2)}</strong>
+                      <strong className="billing-medicine-amount">₹{(item.medicine.price * item.quantity).toFixed(2)}</strong>
                     </div>
                     {/* Store location hint */}
                     <div className="text-[10px] text-slate-500 flex items-center gap-1.5 mt-0.5">
@@ -377,7 +409,7 @@ export const POS: React.FC<POSProps> = ({
 
         {/* Payment & Checkout Footer */}
         {cart.length > 0 && (
-          <div className="p-4 border-t border-teal-100 bg-white space-y-3 shrink-0">
+          <div className="p-4 border-t border-teal-100 bg-white space-y-3 shrink-0 min-h-0 max-h-[58%] overflow-y-auto">
             {/* Discount selector */}
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-600 font-medium">Apply Discount:</span>
@@ -441,7 +473,7 @@ export const POS: React.FC<POSProps> = ({
                   return (
                     <button
                       key={pm.id}
-                      onClick={() => setPaymentMethod(pm.id)}
+                      onClick={() => { setPaymentMethod(pm.id); setUpiPaymentConfirmed(false); }}
                       className={`p-2 rounded-xl border text-[11px] font-bold flex flex-col items-center gap-1 transition-all ${
                         isSel
                           ? 'border-teal-600 bg-teal-50 text-teal-800 shadow-2xs'
@@ -456,12 +488,71 @@ export const POS: React.FC<POSProps> = ({
               </div>
             </div>
 
+            {paymentMethod === 'UPI / QR' && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
+                <p className="text-xs font-bold text-emerald-900">Scan to pay ₹{grandTotal.toFixed(2)}</p>
+                {upiQrDataUrl ? (
+                  <img
+                    src={upiQrDataUrl}
+                    alt={`UPI QR code for ₹${grandTotal.toFixed(2)}`}
+                    className="mx-auto my-2 h-56 w-56 rounded-lg border border-emerald-100 bg-white p-2"
+                  />
+                ) : (
+                  <div className="mx-auto my-2 flex h-56 w-56 items-center justify-center rounded-lg border border-emerald-100 bg-white text-xs text-slate-500">Preparing payment QR…</div>
+                )}
+                <p className="text-[11px] text-slate-600">UPI ID: <span className="font-semibold text-slate-800">musthakmustha786@oksbi</span></p>
+                <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-emerald-200 bg-white p-2 text-left text-[11px] font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={upiPaymentConfirmed}
+                    onChange={(event) => setUpiPaymentConfirmed(event.target.checked)}
+                    className="mt-0.5 accent-emerald-700"
+                  />
+                  I confirmed the payment was received.
+                </label>
+                <p className="mt-2 text-[10px] text-slate-500">After the customer approves payment, verify it in your UPI app before completing the sale.</p>
+              </div>
+            )}
+
+            {paymentMethod === 'Cash' && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <label htmlFor="cash-received" className="mb-1 block text-[10px] font-extrabold uppercase text-amber-800">Cash received</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-amber-900">₹</span>
+                  <input
+                    id="cash-received"
+                    type="number"
+                    min={grandTotal}
+                    step="0.01"
+                    value={cashReceived}
+                    onChange={(event) => setCashReceived(event.target.value)}
+                    placeholder={grandTotal.toFixed(2)}
+                    className="min-w-0 flex-1 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                  />
+                  <span className="text-xs font-semibold text-amber-800">Change: ₹{changeDue.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+
             {/* Checkout Button */}
             <button
-              onClick={onCompleteOrder}
-              className="w-full min-h-12 py-3 rounded-xl med-gradient-btn text-white font-semibold text-sm shadow-md shadow-teal-600/20 hover:shadow-lg transition-all flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+              onClick={() => {
+                if (paymentMethod === 'Cash' && (!Number.isFinite(cashReceivedAmount) || cashReceivedAmount < grandTotal)) {
+                  alert('Cash received must be at least the sale total.');
+                  return;
+                }
+                if (paymentMethod === 'UPI / QR' && !upiPaymentConfirmed) {
+                  alert('Please confirm that the UPI payment was received before completing the sale.');
+                  return;
+                }
+                onCompleteOrder(paymentMethod === 'Cash' ? cashReceivedAmount : undefined);
+                setCashReceived('');
+                setUpiPaymentConfirmed(false);
+              }}
+              disabled={cart.length === 0}
+              className="sticky bottom-0 z-10 w-full min-h-12 py-3 rounded-xl med-gradient-btn text-white font-semibold text-sm shadow-md shadow-teal-600/20 hover:shadow-lg transition-all flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
             >
-              <Check size={18} /> Complete sale · ₹{grandTotal.toFixed(2)}
+              <Check size={18} /> {paymentMethod === 'UPI / QR' ? `Confirm payment & open bill · ₹${grandTotal.toFixed(2)}` : `Complete sale · ₹${grandTotal.toFixed(2)}`}
             </button>
           </div>
         )}

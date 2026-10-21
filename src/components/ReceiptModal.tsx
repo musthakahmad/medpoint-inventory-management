@@ -134,6 +134,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, branch, onClo
                 <span>Payment Mode:</span>
                 <span className="font-bold text-slate-900">{order.paymentMethod}</span>
               </div>
+              {order.paymentMethod === 'Cash' && order.cashReceived !== undefined && (
+                <>
+                  <div className="flex justify-between"><span>Cash received:</span><span className="font-bold text-slate-900">₹{order.cashReceived.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>Change due:</span><span className="font-bold text-slate-900">₹{(order.changeDue || 0).toFixed(2)}</span></div>
+                </>
+              )}
             </div>
 
             {/* Footer Tagline */}
