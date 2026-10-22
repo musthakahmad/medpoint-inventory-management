@@ -1,6 +1,6 @@
 import { Medicine, PharmacyBranch, Order, InventoryLog, Salesman, Supplier } from '../types';
 
-export const PHARMACY_ADDRESS = 'Opp. KSRTC Bus Stand, Kochi, Ernakulam';
+export const PHARMACY_ADDRESS = 'Opp. KSRTC Bus Stand, Sullia, D.K.';
 
 export const INITIAL_SUPPLIERS: Supplier[] = [
   { id: 'sup-01', name: 'Cipla Distribution', contactName: 'Regional Sales Desk', phone: '+91 484 400 1100', email: 'orders@example.com', leadTimeDays: 3 },
