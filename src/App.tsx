@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Medicine, MedicineBatch, AuditEvent, Order, InventoryLog, PharmacyBranch, CartItem, PaymentMethod, Salesman, Supplier, PurchaseOrder, DailyClosing, ExpenseEntry, ShiftHandover } from './types';
-import { ADDITIONAL_STOCK_PRODUCTS, INITIAL_BRANCHES, INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_LOGS, INITIAL_SALESMEN, INITIAL_SUPPLIERS } from './data/mockData';
+import { ADDITIONAL_STOCK_PRODUCTS, INITIAL_BRANCHES, INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_LOGS, INITIAL_SALESMEN, INITIAL_SUPPLIERS, PHARMACY_ADDRESS } from './data/mockData';
 
 // App Console Components
 import { Header } from './components/Header';
@@ -114,12 +114,13 @@ export default function App({ initialWorkspaceData, workspace }: AppProps) {
   const [handovers, setHandovers] = useState<ShiftHandover[]>(() => initialWorkspaceData?.handovers ?? readStoredValue(LOCAL_STORAGE_KEY_HANDOVERS, [], isRecordArray<ShiftHandover>));
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>(() => initialWorkspaceData?.auditEvents ?? readStoredValue(LOCAL_STORAGE_KEY_AUDIT, [], isRecordArray<AuditEvent>));
 
-  const [branches] = useState<PharmacyBranch[]>(() => initialWorkspaceData ? [initialWorkspaceData.currentBranch] : INITIAL_BRANCHES);
+  const [branches] = useState<PharmacyBranch[]>(() => initialWorkspaceData ? [{ ...initialWorkspaceData.currentBranch, address: PHARMACY_ADDRESS }] : INITIAL_BRANCHES);
   const [currentBranch, setCurrentBranch] = useState<PharmacyBranch>(() => {
-    if (initialWorkspaceData) return initialWorkspaceData.currentBranch;
-    return readStoredValue(LOCAL_STORAGE_KEY_BRANCH, INITIAL_BRANCHES[0], (value): value is PharmacyBranch =>
+    if (initialWorkspaceData) return { ...initialWorkspaceData.currentBranch, address: PHARMACY_ADDRESS };
+    const storedBranch = readStoredValue(LOCAL_STORAGE_KEY_BRANCH, INITIAL_BRANCHES[0], (value): value is PharmacyBranch =>
       isObjectValue(value) && typeof value.id === 'string' && INITIAL_BRANCHES.some((branch) => branch.id === value.id),
     );
+    return { ...storedBranch, address: PHARMACY_ADDRESS };
   });
 
   // Shared Cart State

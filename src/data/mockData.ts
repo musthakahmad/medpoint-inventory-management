@@ -1,5 +1,7 @@
 import { Medicine, PharmacyBranch, Order, InventoryLog, Salesman, Supplier } from '../types';
 
+export const PHARMACY_ADDRESS = 'Opp. KSRTC Bus Stand, Kochi, Ernakulam';
+
 export const INITIAL_SUPPLIERS: Supplier[] = [
   { id: 'sup-01', name: 'Cipla Distribution', contactName: 'Regional Sales Desk', phone: '+91 484 400 1100', email: 'orders@example.com', leadTimeDays: 3 },
   { id: 'sup-02', name: 'Sun Pharma Wholesale', contactName: 'Kerala Wholesale Team', phone: '+91 484 400 2200', email: 'supply@example.com', leadTimeDays: 5 },
@@ -11,7 +13,7 @@ export const INITIAL_BRANCHES: PharmacyBranch[] = [
     name: 'MedPoint Main Healthcare Pharmacy',
     city: 'Kochi',
     district: 'Ernakulam',
-    address: 'Plot 45, Medical Center Road, MG Road, Ernakulam',
+    address: PHARMACY_ADDRESS,
     phone: '+91 98470 11223',
     licenseNumber: 'DL-2024-KER-88902',
     isMain: true,

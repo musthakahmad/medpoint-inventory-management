@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Cross, Minus, Plus, Search, ShoppingBag, ShieldCheck, Trash2, HeartPulse, User, X, Pill, Sparkles, Droplets, Smile, Stethoscope, LayoutGrid } from 'lucide-react';
-import { INITIAL_PRODUCTS } from '../data/mockData';
+import { INITIAL_PRODUCTS, PHARMACY_ADDRESS } from '../data/mockData';
 import { customerSupabase } from '../lib/supabase';
 
 const customerAuthErrorMessage = (message: string, action: 'send' | 'verify') => {
@@ -327,7 +327,7 @@ export const CustomerShop: React.FC = () => {
       </section>
     </main>
       <footer id="contact" className="pharmacy-footer">
-        <div className="pharmacy-footer-main"><div className="pharmacy-footer-brand"><a href="#top" className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-white"><Cross size={22}/></span><span><strong>MedPoint</strong><small>Your neighbourhood pharmacy</small></span></a><p>Everyday pharmacy, personal care and wellness essentials in one convenient shop.</p></div><div className="pharmacy-footer-links"><strong>Shop</strong><a href="#top">Home</a><a href="#categories">Shop by category</a><a href="#products">Featured products</a></div><div className="pharmacy-footer-links"><strong>Care information</strong><a href="#about">About MedPoint</a><a href="#catalog">Prescription products</a><span>Ask a pharmacist when a product requires prescription review.</span></div><div className="pharmacy-footer-links"><strong>Shop preview</strong><span>Prices, stock and product details are demonstration data.</span><span>Phone sign-in requires Supabase Phone Auth and an SMS provider.</span><span>Online order placement is not connected yet.</span></div></div>
+        <div className="pharmacy-footer-main"><div className="pharmacy-footer-brand"><a href="#top" className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-white"><Cross size={22}/></span><span><strong>MedPoint</strong><small>Your neighbourhood pharmacy</small></span></a><p>Everyday pharmacy, personal care and wellness essentials in one convenient shop.</p><p><strong>Visit us:</strong> {PHARMACY_ADDRESS}</p></div><div className="pharmacy-footer-links"><strong>Shop</strong><a href="#top">Home</a><a href="#categories">Shop by category</a><a href="#products">Featured products</a></div><div className="pharmacy-footer-links"><strong>Care information</strong><a href="#about">About MedPoint</a><a href="#catalog">Prescription products</a><span>Ask a pharmacist when a product requires prescription review.</span></div><div className="pharmacy-footer-links"><strong>Shop preview</strong><span>Prices, stock and product details are demonstration data.</span><span>Phone sign-in requires Supabase Phone Auth and an SMS provider.</span><span>Online order placement is not connected yet.</span></div></div>
         <div className="pharmacy-footer-bottom"><span>© {new Date().getFullYear()} MedPoint</span><span>Prescription medicines require pharmacist review. Product images are illustrative.</span></div>
       </footer>
     {showCart && <div className="shop-overlay-enter fixed inset-0 z-40 flex justify-end bg-slate-900/40" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowCart(false); }}>

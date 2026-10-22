@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cross, MapPin, Bell, RefreshCw, ChevronDown, CheckCircle2, AlertTriangle, Search, Download, Upload } from 'lucide-react';
 import { PharmacyBranch, Medicine } from '../types';
+import { PHARMACY_ADDRESS } from '../data/mockData';
 
 interface HeaderProps {
   currentBranch: PharmacyBranch;
@@ -61,18 +62,18 @@ export const Header: React.FC<HeaderProps> = ({
 
         <div className="relative hidden md:block">
           {branches.length === 1 ? (
-            <div className="flex max-w-64 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700" aria-label="Pharmacy location">
+            <div className="flex max-w-72 items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700" aria-label={`Pharmacy location: ${PHARMACY_ADDRESS}`}>
               <MapPin size={16} className="shrink-0 text-teal-700" />
-              <span className="truncate">{currentBranch.name}</span>
+              <span className="min-w-0"><span className="block truncate">{currentBranch.name}</span><span className="block truncate text-[10px] leading-3 text-slate-500">{PHARMACY_ADDRESS}</span></span>
             </div>
           ) : (
             <>
           <button
             onClick={() => setIsBranchOpen(!isBranchOpen)}
-            className="flex max-w-64 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="flex max-w-72 items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             <MapPin size={16} className="shrink-0 text-teal-700" />
-            <span className="truncate">{currentBranch.name}</span>
+            <span className="min-w-0"><span className="block truncate">{currentBranch.name}</span><span className="block truncate text-[10px] leading-3 text-slate-500">{PHARMACY_ADDRESS}</span></span>
             <ChevronDown size={15} className="shrink-0 text-slate-400" />
           </button>
           {isBranchOpen && (
