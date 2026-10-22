@@ -171,7 +171,14 @@ export const StaffWorkspace: React.FC = () => {
   };
 
   const supabaseClient = supabase;
-  if (!supabaseClient) return <App />;
+  if (!supabaseClient) {
+    if (!import.meta.env.PROD) return <App />;
+    return <Panel>
+      <h1 className="text-xl font-bold text-slate-900">Staff access is not configured</h1>
+      <p className="mt-2 text-sm leading-6 text-slate-600">The staff workspace needs its Supabase connection before it can show login, invitations, or stock records. Add <strong>VITE_SUPABASE_URL</strong> and <strong>VITE_SUPABASE_PUBLISHABLE_KEY</strong> in the Vercel project’s Environment Variables, then redeploy.</p>
+      <a href="/" className="mt-5 inline-flex rounded-lg bg-teal-700 px-4 py-2.5 font-semibold text-white">Return to customer shop</a>
+    </Panel>;
+  }
   if (loading) return <Panel><p className="text-sm text-slate-600">Connecting to your pharmacy workspace…</p></Panel>;
   if (!session) return <AuthGate />;
   if (!memberships.length) return <Panel>
