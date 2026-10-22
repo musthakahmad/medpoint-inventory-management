@@ -5,5 +5,5 @@ import { StaffWorkspace } from './components/StaffWorkspace.tsx'
 import './assets/index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>{window.location.pathname === '/shop' ? <CustomerShop /> : <StaffWorkspace />}</React.StrictMode>,
+  <React.StrictMode>{window.location.pathname === '/staff' ? <StaffWorkspace /> : <CustomerShop />}</React.StrictMode>,
 )

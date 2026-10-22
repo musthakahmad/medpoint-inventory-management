@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Cross, Minus, Plus, Search, ShoppingBag, ShieldCheck, Trash2, HeartPulse, User, X, ExternalLink, Pill, Sparkles, Droplets, Smile, Stethoscope, LayoutGrid } from 'lucide-react';
+import { Cross, Minus, Plus, Search, ShoppingBag, ShieldCheck, Trash2, HeartPulse, User, X, Pill, Sparkles, Droplets, Smile, Stethoscope, LayoutGrid } from 'lucide-react';
 import { INITIAL_PRODUCTS } from '../data/mockData';
 import { customerSupabase } from '../lib/supabase';
-
-const STAFF_SHOP_SESSION_KEY = 'medpoint_staff_shop_navigation';
 
 const customerAuthErrorMessage = (message: string, action: 'send' | 'verify') => {
   const normalized = message.toLowerCase();
@@ -161,7 +159,6 @@ const categories: Array<'All' | Category> = ['All', 'Medicines', 'Skin & hygiene
 const sampleProductById = new Map(sampleProducts.map((product) => [product.id, product] as const));
 
 export const CustomerShop: React.FC = () => {
-  const [staffNavigation, setStaffNavigation] = useState(() => window.sessionStorage.getItem(STAFF_SHOP_SESSION_KEY) === '1');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<'All' | Category>('All');
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -291,7 +288,6 @@ export const CustomerShop: React.FC = () => {
         <a href="#top" className="flex items-center gap-3" aria-label="MedPoint home"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-700 text-white"><Cross size={20}/></span><div><p className="font-bold tracking-tight text-slate-900">MedPoint</p><p className="text-xs text-slate-500">Your neighbourhood pharmacy</p></div></a>
         <nav className="shop-main-nav hidden items-center gap-6 text-sm font-medium text-slate-600 lg:flex"><a href="#top" className="hover:text-teal-700">Home</a><a href="#about" className="hover:text-teal-700">About us</a><a href="#categories" className="hover:text-teal-700">Categories</a><a href="#products" className="hover:text-teal-700">Products</a><a href="#contact" className="hover:text-teal-700">Contact</a></nav>
         <div className="flex items-center gap-2">
-          {staffNavigation && <button onClick={() => { window.sessionStorage.removeItem(STAFF_SHOP_SESSION_KEY); window.location.assign('/'); }} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 hover:border-teal-300 hover:text-teal-800"><ExternalLink size={17}/><span className="hidden sm:inline">Staff dashboard</span></button>}
           <button onClick={() => { setLoginForCheckout(false); setOtpSent(false); setOtp(''); setAuthMessage(''); setShowLogin(true); }} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 hover:border-teal-300 hover:text-teal-800"><User size={17}/><span className="hidden sm:inline">{signedIn ? customerPhone : 'Login'}</span></button>
           <button aria-label={`Open basket, ${itemCount} items`} onClick={() => setShowCart(!showCart)} className="relative inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-800"><ShoppingBag size={17}/><span className="shop-action-label">Basket</span><span className="rounded-full bg-white/20 px-1.5 text-xs">{itemCount}</span></button>
         </div>
