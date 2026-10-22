@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, Dna, Package, Plus, Search, TrendingUp } from 'lucide-react';
 import { Medicine, Order, InventoryLog, PharmacyBranch, Salesman } from '../types';
+import { PHARMACY_ADDRESS } from '../data/mockData';
 
 interface DashboardProps {
   medicines: Medicine[];
@@ -93,6 +94,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="relative z-10">
           <h2 className="text-3xl font-semibold tracking-tight">Dashboard</h2>
           <p className="mt-2 text-sm text-teal-100">{currentBranch.name}</p>
+          <p className="mt-1 text-sm text-teal-100/85">{PHARMACY_ADDRESS}</p>
         </div>
         <button
           onClick={onNavigateToPOS}
