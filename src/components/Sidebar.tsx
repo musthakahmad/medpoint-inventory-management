@@ -1,5 +1,5 @@
-import React from 'react';
-import { ClipboardList, LayoutDashboard, PackageCheck, ShoppingBag, TrendingUp, Users, Search, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { ClipboardList, LayoutDashboard, PackageCheck, ShoppingBag, TrendingUp, Users, Search, ExternalLink, MoreHorizontal, X } from 'lucide-react';
 
 export type TabType = 'dashboard' | 'shelf-finder' | 'inventory' | 'pos' | 'sales' | 'salesmen' | 'operations';
 
@@ -11,6 +11,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, lowStockCount, expiringCount }) => {
+  const [moreOpen, setMoreOpen] = useState(false);
   const alertCount = lowStockCount + expiringCount;
   const navItems = [
     { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard },
@@ -31,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, lowSt
           return (
             <button
               key={id}
+              data-nav-id={id}
               onClick={() => setActiveTab(id)}
               title={label}
               aria-label={label}
@@ -46,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, lowSt
         })}
         <div className="my-3 border-t border-slate-200" />
         <button
+          data-nav-id="customer-shop"
           onClick={() => {
             window.location.assign('/');
           }}
@@ -56,7 +59,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, lowSt
           <ExternalLink size={18} />
           <span className="flex-1">Customer shop</span>
         </button>
+        <button
+          type="button"
+          className="mobile-more-button"
+          aria-expanded={moreOpen}
+          aria-label={moreOpen ? 'Close more navigation options' : 'More navigation options'}
+          onClick={() => setMoreOpen((open) => !open)}
+        >
+          {moreOpen ? <X size={18} /> : <MoreHorizontal size={18} />}
+          <span>More</span>
+        </button>
       </nav>
+      {moreOpen && <div className="mobile-more-menu" role="group" aria-label="More workspace pages">
+        <button onClick={() => { setActiveTab('shelf-finder'); setMoreOpen(false); }}><Search size={17} />Find medicine</button>
+        <button onClick={() => { setActiveTab('salesmen'); setMoreOpen(false); }}><Users size={17} />Staff</button>
+        <button onClick={() => { setActiveTab('operations'); setMoreOpen(false); }}><ClipboardList size={17} />Operations</button>
+        <button onClick={() => { window.location.assign('/'); }}><ExternalLink size={17} />Customer shop</button>
+      </div>}
     </aside>
   );
 };

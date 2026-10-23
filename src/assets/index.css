@@ -1282,6 +1282,33 @@ html, body { background: #f3f6fb; }
 
 /* Billing medicine prices sit on light product and cart surfaces. */
 .app-shell .billing-medicine-amount { color: #111827 !important; }
+.mobile-more-button,
+.mobile-more-menu { display: none; }
+.customer-shop .shop-delivery-info { border: 1px solid #263945; border-radius: 20px; background: linear-gradient(110deg,#111e28,#142632); padding: clamp(18px,3vw,26px); }
+.customer-shop .shop-delivery-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin-top: 16px; }
+.customer-shop .shop-delivery-grid article { display: flex; min-width: 0; gap: 12px; border: 1px solid #293f4a; border-radius: 15px; background: rgba(8,18,25,.35); padding: 15px; }
+.customer-shop .shop-delivery-grid article > span { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border-radius: 12px; background: rgba(73,185,171,.12); color: #73d4c8; }
+.customer-shop .shop-delivery-grid strong { color: #e4edf1; font-size: 13px; }
+.customer-shop .shop-delivery-grid p { margin: 5px 0 0; color: #a8bac4; font-size: 12px; line-height: 1.6; }
+@media (max-width: 767px) {
+  .app-sidebar nav { justify-content: space-around; overflow: visible; }
+  .app-sidebar nav > button[data-nav-id="shelf-finder"],
+  .app-sidebar nav > button[data-nav-id="salesmen"],
+  .app-sidebar nav > button[data-nav-id="operations"],
+  .app-sidebar nav > button[data-nav-id="customer-shop"] { display: none; }
+  .app-sidebar nav > button[data-nav-id="dashboard"],
+  .app-sidebar nav > button[data-nav-id="inventory"],
+  .app-sidebar nav > button[data-nav-id="pos"],
+  .app-sidebar nav > button[data-nav-id="sales"] { flex: 1 1 0; max-width: 82px; }
+  .app-sidebar nav > .mobile-more-button { display: flex; flex: 1 1 0; max-width: 82px; }
+  .app-sidebar nav > button > span:first-of-type { font-size: 10px; line-height: 12px; }
+  .mobile-more-menu { position: fixed; z-index: 41; right: 10px; bottom: calc(74px + env(safe-area-inset-bottom)); display: grid; width: min(250px, calc(100vw - 20px)); gap: 4px; border: 1px solid #33445c; border-radius: 16px; background: #111d2e; padding: 8px; box-shadow: 0 16px 40px rgba(0,0,0,.4); }
+  .mobile-more-menu button { display: flex; min-height: 46px; align-items: center; gap: 12px; border-radius: 10px; padding: 10px 12px; color: #e2e8f0; text-align: left; }
+  .mobile-more-menu button:hover { background: #1c2a40; }
+  .mobile-more-menu svg { flex: 0 0 auto; color: #73d4c8; }
+  .customer-shop .shop-delivery-grid { grid-template-columns: 1fr; gap: 9px; }
+  .customer-shop .shop-delivery-grid article { padding: 12px; }
+}
 .app-shell .cart-rate-badge {
   color: #111827 !important;
   border-color: #cbdde0;
