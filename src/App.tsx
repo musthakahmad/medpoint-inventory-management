@@ -13,6 +13,7 @@ import { SalesHistory } from './components/SalesHistory';
 import { SalesmenManagement } from './components/SalesmenManagement';
 import { ReceiptModal } from './components/ReceiptModal';
 import { Operations } from './components/Operations';
+import { CustomerOrderRequests } from './components/CustomerOrderRequests';
 import { isObjectValue, isRecordArray, readStoredValue, removeStoredValue, writeStoredValue } from './utils/storage';
 import { supabase } from './lib/supabase';
 import { WorkspaceData } from './lib/workspaceState';
@@ -53,6 +54,7 @@ export interface AppWorkspaceContext {
   id: string;
   userId: string;
   name: string;
+  role: string;
 }
 
 export function loadLocalWorkspaceData(): WorkspaceData {
@@ -769,6 +771,12 @@ export default function App({ initialWorkspaceData, workspace }: AppProps) {
               onSelectOrderForReceipt={setSelectedReceiptOrder}
               onRefundOrder={handleRefundOrder}
             />
+          )}
+
+          {activeTab === 'customer-orders' && (
+            workspace
+              ? <CustomerOrderRequests workspaceId={workspace.id} role={workspace.role} />
+              : <section className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-8 text-center"><h1 className="text-xl font-bold text-slate-900">Staff sign-in required</h1><p className="mt-2 text-sm text-slate-600">Sign in to your pharmacy workspace to review customer order requests.</p></section>
           )}
 
           {activeTab === 'salesmen' && (

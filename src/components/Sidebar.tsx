@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ClipboardList, LayoutDashboard, PackageCheck, ShoppingBag, TrendingUp, Users, Search, ExternalLink, MoreHorizontal, X } from 'lucide-react';
+import { ClipboardList, LayoutDashboard, PackageCheck, ShoppingBag, TrendingUp, Users, Search, ExternalLink, MoreHorizontal, X, ClipboardCheck } from 'lucide-react';
 
-export type TabType = 'dashboard' | 'shelf-finder' | 'inventory' | 'pos' | 'sales' | 'salesmen' | 'operations';
+export type TabType = 'dashboard' | 'shelf-finder' | 'inventory' | 'pos' | 'sales' | 'customer-orders' | 'salesmen' | 'operations';
 
 interface SidebarProps {
   activeTab: TabType;
@@ -19,6 +19,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, lowSt
     { id: 'inventory' as TabType, label: 'Inventory', icon: PackageCheck, alert: alertCount },
     { id: 'pos' as TabType, label: 'Billing', icon: ShoppingBag },
     { id: 'sales' as TabType, label: 'Sales history', icon: TrendingUp },
+    { id: 'customer-orders' as TabType, label: 'Customer orders', icon: ClipboardCheck },
     { id: 'salesmen' as TabType, label: 'Staff', icon: Users },
     { id: 'operations' as TabType, label: 'Operations', icon: ClipboardList },
   ];
@@ -73,6 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, lowSt
       {moreOpen && <div className="mobile-more-menu" role="group" aria-label="More workspace pages">
         <button onClick={() => { setActiveTab('shelf-finder'); setMoreOpen(false); }}><Search size={17} />Find medicine</button>
         <button onClick={() => { setActiveTab('salesmen'); setMoreOpen(false); }}><Users size={17} />Staff</button>
+        <button onClick={() => { setActiveTab('customer-orders'); setMoreOpen(false); }}><ClipboardCheck size={17} />Customer orders</button>
         <button onClick={() => { setActiveTab('operations'); setMoreOpen(false); }}><ClipboardList size={17} />Operations</button>
         <button onClick={() => { window.location.assign('/'); }}><ExternalLink size={17} />Customer shop</button>
       </div>}

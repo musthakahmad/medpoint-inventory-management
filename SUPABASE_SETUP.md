@@ -18,6 +18,12 @@ The shop now calls Supabase Phone Auth to request and verify customer OTPs. Befo
 
 1. Run `SUPABASE_CUSTOMER_AUTH.sql` once in the Supabase SQL Editor. It prevents new customer accounts from receiving an owner pharmacy workspace.
 2. In Supabase, enable Phone sign-in under Authentication → Sign In / Providers and configure a supported SMS provider with its credentials.
-3. Keep order placement disabled until a customer-orders backend and stock-safe checkout are added. The current shop catalogue and checkout are sample data only.
+3. Run `SUPABASE_CUSTOMER_ORDERS.sql` once in the Supabase SQL Editor to create the customer order-request backend and its access policies.
+4. Sign in to `/staff` as the pharmacy owner or manager, open **Customer orders**, and select **Enable online orders**. Only one workspace can serve the public shop in this starter app.
+5. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to Vercel's Environment Variables and redeploy. Use the same Supabase project where the migration and Phone Auth settings were configured.
+
+Customers must sign in with a verified phone number before sending a request. Requests are stored in Supabase and appear in the staff **Customer orders** page. A pharmacist, manager, or owner can confirm or decline them; the customer confirmation page checks for status changes every 15 seconds.
+
+This is a request-and-review flow, not a payment or stock reservation system. Product catalogue prices and stock shown by the shop are sample estimates; staff must check inventory and agree the final price and delivery before confirming. No payment is collected online, and confirming a request does not deduct stock from the workspace snapshot. Prescription-only products cannot be requested online.
 
 The customer session uses separate browser storage so customer sign-in does not replace the owner's or staff member's MedPoint workspace session.

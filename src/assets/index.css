@@ -1129,6 +1129,17 @@ html, body { background: #f3f6fb; }
   background-color: #fff !important;
   color: #111827 !important;
 }
+.customer-shop [role="dialog"] .text-slate-900 { color: #111827 !important; }
+.customer-shop [role="dialog"] .text-slate-800 { color: #1f2937 !important; }
+.customer-shop [role="dialog"] .text-slate-700 { color: #334155 !important; }
+.customer-shop [role="dialog"] .text-slate-600 { color: #475569 !important; }
+.customer-shop [role="dialog"] .text-slate-500 { color: #64748b !important; }
+.customer-shop [role="dialog"] .text-teal-700,
+.customer-shop [role="dialog"] .text-teal-800 { color: #0f766e !important; }
+.customer-shop [role="dialog"] .bg-slate-50 { background-color: #f8fafc !important; }
+.customer-shop [role="dialog"] .border-slate-100,
+.customer-shop [role="dialog"] .border-slate-200,
+.customer-shop [role="dialog"] .border-slate-300 { border-color: #cbd5e1 !important; }
 .customer-shop [role="dialog"] label {
   color: #000 !important;
 }

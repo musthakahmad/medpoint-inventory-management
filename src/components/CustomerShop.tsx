@@ -31,6 +31,7 @@ interface ShopProduct {
   image: string; requiresPrescription?: boolean; source: 'medicine' | 'sample';
 }
 interface CartLine { product: ShopProduct; quantity: number }
+interface SubmittedCustomerOrder { id: string; order_number: string; status: 'pending' | 'confirmed' | 'rejected'; pharmacy_note?: string }
 
 const AnimatedDna: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -176,6 +177,9 @@ export const CustomerShop: React.FC = () => {
   const [signedIn, setSignedIn] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authMessage, setAuthMessage] = useState('');
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [orderMessage, setOrderMessage] = useState('');
+  const [submittedOrder, setSubmittedOrder] = useState<SubmittedCustomerOrder | null>(null);
   useEffect(() => {
     if (!customerSupabase) return;
     let live = true;
@@ -194,6 +198,63 @@ export const CustomerShop: React.FC = () => {
       subscription.unsubscribe();
     };
   }, []);
+  useEffect(() => {
+    const client = customerSupabase;
+    if (!client || !submittedOrder) return;
+    let live = true;
+    const refreshOrderStatus = async () => {
+      const { data } = await client.from('customer_order_requests')
+        .select('id, order_number, status, pharmacy_note')
+        .eq('id', submittedOrder.id)
+        .maybeSingle();
+      if (live && data) setSubmittedOrder(data as SubmittedCustomerOrder);
+    };
+    const interval = window.setInterval(() => { void refreshOrderStatus(); }, 15000);
+    return () => { live = false; window.clearInterval(interval); };
+  }, [submittedOrder?.id]);
+  const submitCustomerOrder = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setOrderMessage('');
+    if (!customerSupabase) {
+      setOrderMessage('Online order requests are not configured yet. Please contact the pharmacy directly.');
+      return;
+    }
+    if (!cart.length || cart.some((line) => line.product.requiresPrescription)) {
+      setOrderMessage('Remove prescription-only products before sending this request.');
+      return;
+    }
+    setPlacingOrder(true);
+    try {
+      const { data, error } = await customerSupabase.rpc('submit_customer_order', {
+        customer_name_input: customerName.trim(),
+        customer_phone_input: customerPhone,
+        delivery_address_input: deliveryAddress.trim(),
+        delivery_city_input: deliveryCity.trim(),
+        delivery_pincode_input: deliveryPincode,
+        items_input: cart.map(({ product, quantity }) => ({
+          product_id: product.id,
+          name: product.name,
+          quantity,
+          unit_price: product.price,
+        })),
+      });
+      if (error) {
+        const message = error.message.toLowerCase().includes('not enabled')
+          ? 'The pharmacy has not enabled online order requests yet. Please contact the pharmacy directly.'
+          : error.message;
+        setOrderMessage(message);
+        return;
+      }
+      const result = data as SubmittedCustomerOrder;
+      setSubmittedOrder(result);
+      setCart([]);
+      setShowCheckout(false);
+    } catch (error) {
+      setOrderMessage(error instanceof Error ? error.message : 'Could not send your request. Please try again.');
+    } finally {
+      setPlacingOrder(false);
+    }
+  };
   const requestCustomerOtp = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setAuthMessage('');
@@ -307,7 +368,7 @@ export const CustomerShop: React.FC = () => {
         </div>
         <div className="pharmacy-hero-photo"><img src="https://images.unsplash.com/photo-1581056771107-24ca5f033842?auto=format&fit=crop&w=1200&q=85" alt="Doctor speaking with a patient"/><div className="pharmacy-photo-caption"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-700 text-white"><Cross size={20}/></span><span><strong>MedPoint Pharmacy</strong><small>Everyday care, close to home</small></span></div></div>
       </section>
-      <div className="shop-preview-note flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><span><strong>Shop preview:</strong> products, photos, prices and stock are sample data. Phone sign-in needs Supabase Phone Auth and an SMS provider; online order placement is not connected yet.</span><span className="inline-flex items-center gap-1 text-xs font-semibold"><ShieldCheck size={15}/>Preview only</span></div>
+      <div className="shop-preview-note flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><span><strong>Online order requests:</strong> staff will review availability and final pricing before confirming. Product prices and stock shown here are estimates; no payment or stock reservation happens online.</span><span className="inline-flex items-center gap-1 text-xs font-semibold"><ShieldCheck size={15}/>Pharmacy review</span></div>
       <section className="shop-delivery-info" aria-labelledby="shop-delivery-heading">
         <div className="shop-delivery-heading"><p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Local delivery</p><h2 id="shop-delivery-heading" className="mt-1 text-xl font-bold tracking-tight text-slate-900">Delivery & order updates</h2></div>
         <div className="shop-delivery-grid">
@@ -335,13 +396,13 @@ export const CustomerShop: React.FC = () => {
       </section>
     </main>
       <footer id="contact" className="pharmacy-footer">
-        <div className="pharmacy-footer-main"><div className="pharmacy-footer-brand"><a href="#top" className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-white"><Cross size={22}/></span><span><strong>MedPoint</strong><small>Your neighbourhood pharmacy</small></span></a><p>Everyday pharmacy, personal care and wellness essentials in one convenient shop.</p><p><strong>Visit us:</strong> {PHARMACY_ADDRESS}</p></div><div className="pharmacy-footer-links"><strong>Shop</strong><a href="#top">Home</a><a href="#categories">Shop by category</a><a href="#products">Featured products</a></div><div className="pharmacy-footer-links"><strong>Care information</strong><a href="#about">About MedPoint</a><a href="#catalog">Prescription products</a><span>Ask a pharmacist when a product requires prescription review.</span></div><div className="pharmacy-footer-links"><strong>Shop preview</strong><span>Prices, stock and product details are demonstration data.</span><span>Phone sign-in requires Supabase Phone Auth and an SMS provider.</span><span>Online order placement is not connected yet.</span></div></div>
+        <div className="pharmacy-footer-main"><div className="pharmacy-footer-brand"><a href="#top" className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-white"><Cross size={22}/></span><span><strong>MedPoint</strong><small>Your neighbourhood pharmacy</small></span></a><p>Everyday pharmacy, personal care and wellness essentials in one convenient shop.</p><p><strong>Visit us:</strong> {PHARMACY_ADDRESS}</p></div><div className="pharmacy-footer-links"><strong>Shop</strong><a href="#top">Home</a><a href="#categories">Shop by category</a><a href="#products">Featured products</a></div><div className="pharmacy-footer-links"><strong>Care information</strong><a href="#about">About MedPoint</a><a href="#catalog">Prescription products</a><span>Ask a pharmacist when a product requires prescription review.</span></div><div className="pharmacy-footer-links"><strong>Online orders</strong><span>The pharmacy reviews every request and confirms availability and final pricing.</span><span>Payment is arranged with the pharmacy; checkout does not collect payment.</span></div></div>
         <div className="pharmacy-footer-bottom"><span>© {new Date().getFullYear()} MedPoint</span><span>Prescription medicines require pharmacist review. Product images are illustrative.</span></div>
       </footer>
     {showCart && <div className="shop-overlay-enter fixed inset-0 z-40 flex justify-end bg-slate-900/40" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowCart(false); }}>
       <aside className="shop-cart-panel-enter flex h-full w-full max-w-md flex-col bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-slate-200 p-5"><div><h2 className="font-semibold text-slate-900">Your basket</h2><p className="mt-1 text-xs text-slate-500">{cart.length} item type(s)</p></div><button onClick={() => setShowCart(false)} className="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">Close</button></div>
         <div className="flex-1 space-y-3 overflow-y-auto p-5">{cart.length === 0 ? <p className="py-8 text-center text-sm text-slate-500">Your basket is empty.</p> : cart.map((line) => <div key={line.product.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900">{line.product.name}</p><p className="mt-1 text-xs text-slate-500">₹{line.product.price.toFixed(2)} each</p></div><div className="flex items-center gap-2"><button aria-label="Remove one" onClick={() => updateQuantity(line.product.id, -1)} className="rounded-md border p-1"><Minus size={14}/></button><span className="w-4 text-center text-sm">{line.quantity}</span><button aria-label="Add one" onClick={() => updateQuantity(line.product.id, 1)} className="rounded-md border p-1"><Plus size={14}/></button><button aria-label="Remove item" onClick={() => setCart((previous) => previous.filter((item) => item.product.id !== line.product.id))} className="ml-1 p-1 text-rose-600"><Trash2 size={15}/></button></div></div>)}</div>
-        <div className="space-y-3 border-t border-slate-200 p-5"><div className="flex justify-between font-semibold text-slate-900"><span>Estimated total</span><span>₹{total.toFixed(2)}</span></div><button disabled={cart.length === 0} onClick={() => { setShowCart(false); if (signedIn) setShowCheckout(true); else { setLoginForCheckout(true); setShowLogin(true); } }} className="w-full rounded-xl bg-teal-700 px-4 py-3 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300">{signedIn ? 'Continue to checkout' : 'Login to continue'}</button><p className="text-xs leading-5 text-slate-500">Sign-in is a local preview only. Secure phone verification, live stock, payment and order placement require the shared store backend. Prescription products require pharmacist review.</p></div>
+        <div className="space-y-3 border-t border-slate-200 p-5"><div className="flex justify-between font-semibold text-slate-900"><span>Estimated total</span><span>₹{total.toFixed(2)}</span></div><button disabled={cart.length === 0} onClick={() => { setShowCart(false); if (signedIn) setShowCheckout(true); else { setLoginForCheckout(true); setShowLogin(true); } }} className="w-full rounded-xl bg-teal-700 px-4 py-3 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300">{signedIn ? 'Continue to checkout' : 'Login to continue'}</button><p className="text-xs leading-5 text-slate-500">Phone sign-in requires Supabase Phone Auth. Order requests are stored securely and remain pending until pharmacy staff confirm them. Product availability and prices are reviewed by staff.</p></div>
       </aside>
     </div>}
     {showLogin && <div className="shop-overlay-enter fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowLogin(false); }}>
@@ -362,14 +423,28 @@ export const CustomerShop: React.FC = () => {
     </div>}
     {showCheckout && <div className="shop-overlay-enter fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowCheckout(false); }}>
       <section role="dialog" aria-modal="true" aria-labelledby="checkout-title" className="shop-modal-enter w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
-        <div className="flex items-start justify-between"><div><p className="text-xs font-bold uppercase tracking-widest text-teal-700">Checkout preview</p><h2 id="checkout-title" className="mt-2 text-2xl font-bold text-slate-900">Delivery details</h2><p className="mt-1 text-sm text-slate-500">Mobile verified: {customerPhone}</p></div><button aria-label="Close checkout" onClick={() => setShowCheckout(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={18}/></button></div>
+        <div className="flex items-start justify-between"><div><p className="text-xs font-bold uppercase tracking-widest text-teal-700">Order request</p><h2 id="checkout-title" className="mt-2 text-2xl font-bold text-slate-900">Delivery details</h2><p className="mt-1 text-sm text-slate-500">Mobile verified: {customerPhone}</p></div><button aria-label="Close checkout" onClick={() => setShowCheckout(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={18}/></button></div>
+        <form onSubmit={submitCustomerOrder}>
         <div className="mt-5 grid gap-3 sm:grid-cols-2"><label className="text-sm font-medium text-slate-700">Full name<input required value={customerName} onChange={(event) => setCustomerName(event.target.value)} autoComplete="name" placeholder="Name for delivery" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 !text-black caret-black outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"/></label><label className="text-sm font-medium text-slate-700">Mobile number<input readOnly value={customerPhone} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 !text-black caret-black"/></label><label className="text-sm font-medium text-slate-700 sm:col-span-2">Delivery address<input required value={deliveryAddress} onChange={(event) => setDeliveryAddress(event.target.value)} autoComplete="street-address" placeholder="House / street / area" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 !text-black caret-black outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"/></label><label className="text-sm font-medium text-slate-700">City<input required value={deliveryCity} onChange={(event) => setDeliveryCity(event.target.value)} autoComplete="address-level2" placeholder="City" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 !text-black caret-black outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"/></label><label className="text-sm font-medium text-slate-700">PIN code<input required inputMode="numeric" maxLength={6} value={deliveryPincode} onChange={(event) => setDeliveryPincode(event.target.value.replace(/\D/g, '').slice(0, 6))} autoComplete="postal-code" placeholder="6-digit PIN code" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 !text-black caret-black outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"/></label></div>
         <div className="mt-5 max-h-56 space-y-3 overflow-y-auto">{cart.map((line) => <div key={line.product.id} className="flex justify-between gap-4 border-b border-slate-100 pb-3 text-sm"><span className="text-slate-700">{line.product.name} × {line.quantity}</span><strong className="whitespace-nowrap text-slate-900">₹{(line.product.price * line.quantity).toFixed(2)}</strong></div>)}</div>
         <div className="mt-4 flex justify-between text-lg font-bold text-slate-900"><span>Estimated total</span><span>₹{total.toFixed(2)}</span></div>
-        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600"><p><strong>Delivery area:</strong> Sullia, D.K. (availability confirmed by the pharmacy)</p><p className="mt-1"><strong>Delivery fee:</strong> Free in the Sullia service area.</p><p className="mt-1">Online ordering is not connected yet. Your details and basket are only shown here; no order has been sent to the pharmacy.</p></div>
-        <button disabled aria-describedby="checkout-order-status" className="mt-4 w-full cursor-not-allowed rounded-xl bg-slate-300 px-4 py-3 font-semibold text-slate-600">Online ordering setup required</button>
-        <p id="checkout-order-status" className="mt-2 text-center text-xs text-slate-500">A secure order database and stock-checking checkout must be connected before orders can be submitted.</p>
-        <button onClick={() => { setShowCheckout(false); setShowCart(true); }} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Back to basket</button>
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600"><p><strong>Delivery area:</strong> Sullia, D.K. (availability confirmed by the pharmacy)</p><p className="mt-1"><strong>Delivery fee:</strong> Free in the Sullia service area.</p><p className="mt-1">Your request will be sent to the pharmacy for availability and final-price confirmation. No payment is collected and stock is not reserved until staff confirms with you.</p></div>
+        {orderMessage && <p role="alert" className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{orderMessage}</p>}
+        <button type="submit" disabled={placingOrder || cart.length === 0} className="mt-4 w-full rounded-xl bg-teal-700 px-4 py-3 font-semibold text-white hover:bg-teal-800 disabled:cursor-wait disabled:opacity-60">{placingOrder ? 'Sending request…' : 'Request pharmacy confirmation'}</button>
+        <button type="button" onClick={() => { setShowCheckout(false); setShowCart(true); }} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Back to basket</button>
+        </form>
+      </section>
+    </div>}
+    {submittedOrder && <div className="shop-overlay-enter fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/55 p-4">
+      <section role="dialog" aria-modal="true" aria-labelledby="order-confirmation-title" className="w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-2xl sm:p-8">
+        <span className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${submittedOrder.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : submittedOrder.status === 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
+          {submittedOrder.status === 'confirmed' ? <ShieldCheck size={27}/> : submittedOrder.status === 'rejected' ? <X size={27}/> : <Clock3 size={27}/>}
+        </span>
+        <p className="mt-4 text-xs font-bold uppercase tracking-widest text-teal-700">{submittedOrder.status === 'confirmed' ? 'Pharmacy confirmed' : submittedOrder.status === 'rejected' ? 'Request declined' : 'Request received'}</p>
+        <h2 id="order-confirmation-title" className="mt-2 text-2xl font-bold text-slate-900">{submittedOrder.status === 'confirmed' ? 'Your order is confirmed' : submittedOrder.status === 'rejected' ? 'The pharmacy could not accept this request' : 'Waiting for pharmacy review'}</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">Request number <strong className="text-slate-900">{submittedOrder.order_number}</strong>. We’ll check availability and the final price with the pharmacy. This page checks for a status update every 15 seconds.</p>
+        {submittedOrder.pharmacy_note && <p className="mt-4 rounded-xl bg-slate-50 p-3 text-left text-sm text-slate-700"><strong>Pharmacy note:</strong> {submittedOrder.pharmacy_note}</p>}
+        <button onClick={() => setSubmittedOrder(null)} className="mt-6 w-full rounded-xl bg-teal-700 px-4 py-3 font-semibold text-white hover:bg-teal-800">Continue shopping</button>
       </section>
     </div>}
   </div>;

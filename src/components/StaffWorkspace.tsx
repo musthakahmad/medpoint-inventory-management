@@ -243,7 +243,7 @@ export const StaffWorkspace: React.FC = () => {
     {message && <p role="status" className="bg-emerald-50 px-4 py-2 text-center text-xs text-emerald-900">{message}</p>}
     <App
       initialWorkspaceData={workspaceData}
-      workspace={{ id: activeWorkspace.id, userId: session.user.id, name: activeWorkspace.name }}
+      workspace={{ id: activeWorkspace.id, userId: session.user.id, name: activeWorkspace.name, role: activeWorkspace.role }}
     />
   </>;
 };
